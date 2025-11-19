@@ -3,7 +3,7 @@
 Anggota kelompok: 
 1. Rafindra sandi Atmaja
 (202210370311262)
-2. Faisal Ramadhani 
+2. Muhammad Faisal Ramadhani 
 (202210370311292)
 3. Mohammad Miftahul Arif 
 (202210370311051)
@@ -22,6 +22,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
 
 
 
