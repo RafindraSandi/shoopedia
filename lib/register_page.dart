@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert'; // PENTING: Untuk mengelola daftar data (JSON)
-import 'home_page.dart';
+import 'home_page.dart'; // PENTING: Import ini agar bisa pindah ke Home
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -34,35 +32,6 @@ class _RegisterPageState extends State<RegisterPage> {
     });
   }
 
-  // FUNGSI BARU: MENYIMPAN BANYAK AKUN (TIDAK DITIMPA)
-  Future<void> _saveUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // 1. Ambil data lama dulu (jika ada)
-    String? existingUsersString = prefs.getString('all_users');
-    List<dynamic> userList = [];
-
-    if (existingUsersString != null) {
-      // Kalau sudah ada data sebelumnya, kita ubah jadi List agar bisa ditambah
-      userList = jsonDecode(existingUsersString);
-    }
-
-    // 2. Siapkan data user baru
-    Map<String, String> newUser = {
-      "name": _nameController.text,
-      "email": _phoneController.text, // Kita anggap no hp/email sebagai ID
-      "password": _passwordController.text,
-    };
-
-    // 3. Masukkan user baru ke dalam List (Tumpuk data)
-    userList.add(newUser);
-
-    // 4. Simpan kembali List tersebut ke HP dalam bentuk Teks JSON
-    await prefs.setString('all_users', jsonEncode(userList));
-
-    print("Data Tersimpan! Total akun di HP: ${userList.length}");
-  }
-
   @override
   void dispose() {
     _nameController.dispose();
@@ -82,7 +51,9 @@ class _RegisterPageState extends State<RegisterPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: mainColor),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
         title: const Text("Daftar", style: TextStyle(color: Colors.black, fontSize: 20)),
       ),
@@ -141,15 +112,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     backgroundColor: _isButtonActive ? mainColor : Colors.grey[300],
                     elevation: 0,
                   ),
-                  onPressed: _isButtonActive ? () async {
-                    // PANGGIL FUNGSI SIMPAN BARU
-                    await _saveUserData();
-
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Akun berhasil dibuat! Silakan Login.")),
-                    );
-
+                  // 👇 LOGIKA PINDAH KE HOME JUGA DISINI
+                  onPressed: _isButtonActive ? () {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) => const HomePage()),
@@ -166,6 +130,28 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ],
           ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        height: 50,
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("Sudah punya akun? ", style: TextStyle(color: Colors.grey)),
+            InkWell(
+              onTap: () {
+                Navigator.pop(context);
+              },
+              child: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text(
+                  "Log In",
+                  style: TextStyle(color: mainColor, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
