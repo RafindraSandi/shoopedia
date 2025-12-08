@@ -25,7 +25,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
       stockLeft: 3,
       variant: "XXL",
       imagePath:
-          '/mnt/data/WhatsApp Image 2025-11-25 at 12.03.02.jpeg', // file upload local path
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTHtRbMG12M-5bmUQ5OC6sBPNoreL4HDTi0GQ&s', // file upload local path
       selected: false,
     ),
     CartItem(
@@ -36,7 +36,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
       stockLeft: 5,
       variant: "Black, XXL",
       imagePath:
-          '/mnt/data/WhatsApp Image 2025-11-25 at 11.58.25.jpeg', // another uploaded image fallback
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYDgS_WeBSzaUTc4TWjIAbgvv3FaxloDDtvA&s', // another uploaded image fallback
       selected: false,
     ),
     CartItem(
@@ -47,7 +47,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
       stockLeft: 3,
       variant: "WHITE, XXL",
       imagePath:
-          'https://via.placeholder.com/200x200?text=Item', // network fallback
+          'https://mills.co.id/cdn/shop/files/cosmo_jne_away_futsal_jersey_-_white_-_1470_20.png?v=1738381660', // network fallback
       selected: false,
     ),
   ];
@@ -96,7 +96,9 @@ class _KeranjangPageState extends State<KeranjangPage> {
   void _toggleSelectAll(bool? value) {
     final v = value ?? false;
     setState(() {
-      for (var item in cartItems) item.selected = v;
+      for (var item in cartItems) {
+        item.selected = v;
+      }
     });
   }
 
@@ -266,8 +268,9 @@ class _KeranjangPageState extends State<KeranjangPage> {
                                         noProductSelected = v;
                                         if (v) {
                                           // jika toggle on, unselect semua agar total 0
-                                          for (var c in cartItems)
+                                          for (var c in cartItems) {
                                             c.selected = false;
+                                          }
                                         }
                                       });
                                     },
