@@ -1,7 +1,11 @@
 // home_page.dart
 import 'dart:io' as io;
 import 'package:flutter/material.dart';
-import 'keranjang_page.dart'; // Import halaman keranjang
+
+// Pastikan nama file dan class ini benar di folder pages/
+import 'keranjang_page.dart';
+import 'profil_page.dart';
+import 'pages/chat_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,71 +15,76 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final Color mainColor = const Color(0xFFEE4D2D); // warna utama
+  final Color mainColor = const Color(0xFFEE4D2D);
   int _selectedIndex = 0;
 
-  // --- HANYA DATA PRODUK YANG TERSISA ---
   final List<Map<String, dynamic>> products = [
     {
       "name": "Gantungan Kunci Kucing Lucu Imut",
       "price": "Rp10.900",
       "sold": "10RB+ terjual",
-      "image": "https://via.placeholder.com/300",
+      "image":
+          "https://down-id.img.susercontent.com/file/id-11134207-7r98y-lv0nwoyrqbm58f",
       "discount": "50%"
     },
     {
       "name": "Sepatu Wanita Flat Shoes Pita",
       "price": "Rp25.000",
       "sold": "5RB+ terjual",
-      "image": "https://via.placeholder.com/300",
+      "image":
+          "https://media.karousell.com/media/photos/products/2024/3/14/everbest__sepatu_flatshoes_wan_1710428889_41076601_progressive.jpg",
       "discount": "10%"
     },
     {
       "name": "Case HP Samsung A50 Anti Crack",
       "price": "Rp5.000",
       "sold": "1RB+ terjual",
-      "image": "https://via.placeholder.com/300",
+      "image":
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSYLN2Idizgl-iqMyPzl_qXL5dE9-6sJnRQxA&s",
       "discount": null
     },
     {
       "name": "Kemeja Flannel Pria Kotak-Kotak",
       "price": "Rp89.000",
       "sold": "200+ terjual",
-      "image": "https://via.placeholder.com/300",
+      "image":
+          "https://img.lazcdn.com/g/p/2b26740520795b6cc4a47a247a30f2b4.jpg_720x720q80.jpg",
       "discount": "25%"
     },
     {
       "name": "Skin Care Paket Glowing Cepat",
       "price": "Rp150.000",
       "sold": "10RB+ terjual",
-      "image": "https://via.placeholder.com/300",
+      "image":
+          "https://www.static-src.com/wcsstore/Indraprastha/images/catalog/full//91/MTA-35202627/jglow_skincare_paket_glowing_jglow_super_skin_whitening_cream_krim_bpom_set_perawatan_pencerah_kulit_cream_pemutih_wajah_bpom_glowing_cepat_pembersih_muka_full01_gkkc6qbg.jpg",
       "discount": "60%"
     },
     {
       "name": "Mouse Gaming RGB Lampu Warni",
       "price": "Rp75.000",
       "sold": "1RB+ terjual",
-      "image": "https://via.placeholder.com/300",
+      "image":
+          "https://img.lazcdn.com/g/p/56170666bb543c3ff219920fc8a05cc3.jpg_720x720q80.jpg",
       "discount": "5%"
     },
-    // Tambahkan produk dummy lagi biar terlihat banyak
     {
       "name": "Tas Ransel Sekolah",
       "price": "Rp120.000",
       "sold": "100+ terjual",
-      "image": "https://via.placeholder.com/300",
+      "image":
+          "https://img.lazcdn.com/g/p/e519cea445c6839dec3352ef5a0f3dcc.jpg_720x720q80.jpg",
       "discount": "15%"
     },
     {
       "name": "Botol Minum 2L",
       "price": "Rp30.000",
       "sold": "2RB+ terjual",
-      "image": "https://via.placeholder.com/300",
+      "image":
+          "https://down-id.img.susercontent.com/file/sg-11134201-7qvef-lijs81976p7120",
       "discount": null
     },
   ];
 
-  // Helper: menampilkan image (tetap dipakai untuk produk)
   Widget buildImageWidget(String url,
       {BoxFit fit = BoxFit.cover, double? width, double? height}) {
     try {
@@ -87,43 +96,41 @@ class _HomePageState extends State<HomePage> {
           return Image.file(file, fit: fit, width: width, height: height);
         } else {
           return Image.network(
-              'https://via.placeholder.com/300?text=No+Image',
-              fit: fit,
-              width: width,
-              height: height);
+            'https://via.placeholder.com/300?text=No+Image',
+            fit: fit,
+            width: width,
+            height: height,
+          );
         }
       } else {
         return Image.network(url, fit: fit, width: width, height: height);
       }
     } catch (e) {
       return Image.network(
-          'https://via.placeholder.com/300?text=Image+Error',
-          fit: fit,
-          width: width,
-          height: height);
+        'https://via.placeholder.com/300?text=Image+Error',
+        fit: fit,
+        width: width,
+        height: height,
+      );
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-
-      body: CustomScrollView(
+  // 🔥 BAGIAN INI DITAMBAHKAN AGAR PROFIL MUNCUL DENGAN BENAR
+  Widget _getBody() {
+    if (_selectedIndex == 0) {
+      return CustomScrollView(
         slivers: [
-          // 1. NAVBAR (APP BAR)
           SliverAppBar(
             pinned: true,
-            floating: false,
-            automaticallyImplyLeading: false,
             backgroundColor: Colors.white,
             elevation: 0.5,
             expandedHeight: 80,
+            automaticallyImplyLeading: false,
             flexibleSpace: FlexibleSpaceBar(
               background: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
                     children: [
                       Expanded(
@@ -132,8 +139,9 @@ class _HomePageState extends State<HomePage> {
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
                             borderRadius: BorderRadius.circular(6),
-                            border:
-                                Border.all(color: mainColor.withOpacity(0.2)),
+                            border: Border.all(
+                              color: mainColor.withOpacity(0.2),
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -156,7 +164,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Tombol Keranjang
                       IconButton(
                         onPressed: () {
                           Navigator.push(
@@ -168,11 +175,16 @@ class _HomePageState extends State<HomePage> {
                         icon: Icon(Icons.shopping_cart_outlined,
                             color: mainColor),
                       ),
-                      // Tombol Chat
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const ChatListPage()),
+                          );
+                        },
                         icon: Icon(Icons.chat_bubble_outline, color: mainColor),
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -180,28 +192,28 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // 2. PRODUK (GRID) - Langsung muncul setelah Navbar
+          // GRID PRODUK
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final product = products[index];
-                return GestureDetector(
-                  onTap: () {},
-                  child: Container(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final product = products[index];
+                  return Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(6),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.grey.withOpacity(0.06), blurRadius: 3)
+                          color: Colors.grey.withOpacity(0.06),
+                          blurRadius: 3,
+                        ),
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Gambar Produk
                         Expanded(
                           child: ClipRRect(
                             borderRadius: const BorderRadius.vertical(
@@ -221,49 +233,61 @@ class _HomePageState extends State<HomePage> {
                                           color: Colors.yellow[700],
                                           borderRadius:
                                               BorderRadius.circular(4)),
-                                      child: Text(product['discount'],
-                                          style: TextStyle(
-                                              color: mainColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11)),
+                                      child: Text(
+                                        product['discount'],
+                                        style: TextStyle(
+                                          color: mainColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                        ),
+                                      ),
                                     ),
                                   ),
                               ],
                             ),
                           ),
                         ),
-                        // Detail Produk (Nama, Harga, Terjual)
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0, vertical: 8),
+                              horizontal: 8, vertical: 8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(product['name'],
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 13)),
+                              Text(
+                                product['name'],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13),
+                              ),
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  Text(product['price'],
-                                      style: TextStyle(
-                                          color: mainColor,
-                                          fontWeight: FontWeight.bold)),
+                                  Text(
+                                    product['price'],
+                                    style: TextStyle(
+                                      color: mainColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                   const Spacer(),
-                                  Text(product['sold'],
-                                      style: const TextStyle(
-                                          fontSize: 11, color: Colors.grey)),
+                                  Text(
+                                    product['sold'],
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                                 ],
-                              )
+                              ),
                             ],
                           ),
                         )
                       ],
                     ),
-                  ),
-                );
-              }, childCount: products.length),
+                  );
+                },
+                childCount: products.length,
+              ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 childAspectRatio: 0.68,
@@ -273,23 +297,31 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // Spasi bawah agar grid paling bawah tidak tertutup footer
-          SliverToBoxAdapter(
-            child: SizedBox(height: 68),
-          )
+          SliverToBoxAdapter(child: const SizedBox(height: 68)),
         ],
-      ),
+      );
+    }
 
-      // 3. FOOTER (NAVIGASI BAWAH)
+    // 🔥 Halaman profil di sini muncul ketika _selectedIndex == 1
+    return const ShopeediaProfilePage();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: _getBody(),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         selectedItemColor: mainColor,
         unselectedItemColor: Colors.grey,
         currentIndex: _selectedIndex,
-        onTap: (i) => setState(() => _selectedIndex = i),
+        onTap: (i) {
+          setState(() => _selectedIndex = i);
+        },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Beranda'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Saya'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Saya"),
         ],
       ),
     );
