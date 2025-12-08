@@ -2,7 +2,7 @@
 import 'dart:io' as io;
 import 'package:flutter/material.dart';
 
-// Pastikan nama file dan class ini benar di folder pages/
+// Pastikan file-file ini ada di project Anda
 import 'keranjang_page.dart';
 import 'profil_page.dart';
 import 'pages/chat_list_page.dart';
@@ -17,6 +17,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final Color mainColor = const Color(0xFFEE4D2D);
   int _selectedIndex = 0;
+
+  // 1. TAMBAHKAN VARIABEL INI UNTUK MENAMPUNG TEKS PENCARIAN
+  String _searchQuery = "";
 
   final List<Map<String, dynamic>> products = [
     {
@@ -115,9 +118,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // 🔥 BAGIAN INI DITAMBAHKAN AGAR PROFIL MUNCUL DENGAN BENAR
   Widget _getBody() {
     if (_selectedIndex == 0) {
+      // 2. LOGIKA FILTER PRODUK DISINI
+      // Kita buat list baru bernama filteredProducts berdasarkan _searchQuery
+      final List<Map<String, dynamic>> filteredProducts = products.where((item) {
+        final nameLower = item['name'].toString().toLowerCase();
+        final queryLower = _searchQuery.toLowerCase();
+        return nameLower.contains(queryLower);
+      }).toList();
+
       return CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -150,9 +160,14 @@ class _HomePageState extends State<HomePage> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: TextField(
+                                  // 3. UPDATE _searchQuery SAAT MENGETIK
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _searchQuery = value;
+                                    });
+                                  },
                                   decoration: InputDecoration(
-                                    hintText:
-                                        'Cari produk, toko, atau kategori',
+                                    hintText: 'Cari produk...',
                                     hintStyle: TextStyle(
                                         color: mainColor.withOpacity(0.9)),
                                     border: InputBorder.none,
@@ -192,13 +207,32 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // GRID PRODUK
+          // 4. JIKA HASIL PENCARIAN KOSONG
+          if (filteredProducts.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 50.0),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+                      const SizedBox(height: 10),
+                      Text("Produk tidak ditemukan",
+                          style: TextStyle(color: Colors.grey[600])),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // 5. GRID PRODUK (Gunakan filteredProducts)
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             sliver: SliverGrid(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final product = products[index];
+                  // Gunakan filteredProducts, bukan products
+                  final product = filteredProducts[index];
                   return Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
@@ -286,7 +320,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                 },
-                childCount: products.length,
+                childCount: filteredProducts.length, // Gunakan panjang hasil filter
               ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -302,7 +336,6 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // 🔥 Halaman profil di sini muncul ketika _selectedIndex == 1
     return const ShopeediaProfilePage();
   }
 
