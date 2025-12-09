@@ -2,7 +2,7 @@ package io.flutter.plugins;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
-import io.flutter.Log;
+import android.util.Log;
 
 import io.flutter.embedding.engine.FlutterEngine;
 
@@ -15,5 +15,6 @@ import io.flutter.embedding.engine.FlutterEngine;
 public final class GeneratedPluginRegistrant {
   private static final String TAG = "GeneratedPluginRegistrant";
   public static void registerWith(@NonNull FlutterEngine flutterEngine) {
+    Log.d(TAG, "Registering plugins with FlutterEngine");
   }
 }
