@@ -2,6 +2,9 @@
 import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'cart_manager.dart';
+import 'pages/voucher_page.dart';
+import 'pages/payment_page.dart';
 
 class KeranjangPage extends StatefulWidget {
   const KeranjangPage({super.key});
@@ -15,42 +18,15 @@ class _KeranjangPageState extends State<KeranjangPage> {
   final currency =
       NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
 
-  // contoh data keranjang
-  List<CartItem> cartItems = [
-    CartItem(
-      shopName: "Saint Barkley Official",
-      title: "St. Andrew Jersey White",
-      price: 273600,
-      quantity: 1,
-      stockLeft: 3,
-      variant: "XXL",
-      imagePath:
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTHtRbMG12M-5bmUQ5OC6sBPNoreL4HDTi0GQ&s', // file upload local path
-      selected: false,
-    ),
-    CartItem(
-      shopName: "MILLS OFFICIAL Shop",
-      title: "Mills Jersey USS Away",
-      price: 274500,
-      quantity: 1,
-      stockLeft: 5,
-      variant: "Black, XXL",
-      imagePath:
-          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYDgS_WeBSzaUTc4TWjIAbgvv3FaxloDDtvA&s', // another uploaded image fallback
-      selected: false,
-    ),
-    CartItem(
-      shopName: "MILLS OFFICIAL Shop",
-      title: "MILLS COSMO JNE AWAY FUTSAL",
-      price: 399000,
-      quantity: 1,
-      stockLeft: 3,
-      variant: "WHITE, XXL",
-      imagePath:
-          'https://mills.co.id/cdn/shop/files/cosmo_jne_away_futsal_jersey_-_white_-_1470_20.png?v=1738381660', // network fallback
-      selected: false,
-    ),
-  ];
+  // Cart items state variable
+  late List<CartItem> cartItems;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize cart items from CartManager
+    cartItems = List.from(CartManager.cartItems);
+  }
 
   bool noProductSelected = false; // toggle "Tidak ada produk yang dipilih"
   bool get allSelected =>
@@ -106,10 +82,13 @@ class _KeranjangPageState extends State<KeranjangPage> {
   void _removeSelected() {
     setState(() {
       cartItems.removeWhere((c) => c.selected);
+      // Sync back to CartManager
+      CartManager.cartItems.clear();
+      CartManager.cartItems.addAll(cartItems);
     });
   }
 
-  // Checkout action (simpel)
+  // Checkout action - navigate to payment page
   void _checkout() {
     final selected = cartItems.where((c) => c.selected).toList();
     if (selected.isEmpty || noProductSelected) {
@@ -118,31 +97,11 @@ class _KeranjangPageState extends State<KeranjangPage> {
       return;
     }
 
-    // Untuk demo: tunjukkan dialog ringkasan
-    final total = computeTotalSelected();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Konfirmasi Checkout"),
-        content: Text(
-            "Kamu akan checkout ${selected.length} produk.\nTotal: ${currency.format(total)}"),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Batal")),
-          ElevatedButton(
-            onPressed: () {
-              // placeholder: hapus produk yang dibeli (untuk demo)
-              setState(() {
-                cartItems.removeWhere((c) => c.selected);
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Checkout berhasil (demo)")));
-            },
-            child: const Text("Bayar"),
-          ),
-        ],
+    // Navigate to payment page with selected items
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentPage(selectedItems: selected),
       ),
     );
   }
@@ -235,23 +194,14 @@ class _KeranjangPageState extends State<KeranjangPage> {
                                               fontWeight: FontWeight.bold))),
                                   TextButton(
                                     onPressed: () {
-                                      // placeholder: buka dialog/method untuk masukkan kode
-                                      showDialog(
-                                        context: context,
-                                        builder: (_) => AlertDialog(
-                                          title: const Text("Voucher"),
-                                          content: const Text(
-                                              "Fitur voucher demo (implementasikan sesuai backend)"),
-                                          actions: [
-                                            TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                child: const Text("Tutup"))
-                                          ],
-                                        ),
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const VoucherPage()),
                                       );
                                     },
-                                    child: const Text("Gunakan/masukkan kode"),
+                                    child: const Text("Pilih Voucher"),
                                   ),
                                 ],
                               ),
@@ -449,6 +399,9 @@ class _KeranjangPageState extends State<KeranjangPage> {
                                   onPressed: () {
                                     setState(() {
                                       cartItems.removeAt(index - 1);
+                                      // Sync back to CartManager
+                                      CartManager.cartItems.clear();
+                                      CartManager.cartItems.addAll(cartItems);
                                     });
                                   },
                                   icon: Icon(Icons.delete_outline,
