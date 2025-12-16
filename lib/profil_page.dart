@@ -5,6 +5,8 @@ import 'package:shoopedia/pages/address_page.dart';
 import 'package:shoopedia/pages/payment_page.dart';
 import 'package:shoopedia/pages/voucher_page.dart';
 import 'package:shoopedia/pages/pesanan_page.dart'; // <<< DITAMBAHKAN
+import 'package:shoopedia/pages/shopeepay_page.dart';
+import 'package:shoopedia/pages/shopee_coins_page.dart';
 
 class ShopeediaProfilePage extends StatefulWidget {
   const ShopeediaProfilePage({super.key});
@@ -219,19 +221,34 @@ class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
                     icon: Icons.account_balance_wallet,
                     title: "Saldo ShopeediaPay",
                     value: "Rp 0",
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ShopeediaPayPage()),
+                      );
+                    },
                   ),
                   walletMenu(
                     icon: Icons.monetization_on,
                     title: "Koin Shopeedia",
                     value: "20 Koin",
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ShopeeCoinsPage()),
+                      );
+                    },
                   ),
                   walletMenu(
                     icon: Icons.local_offer,
                     title: "Voucher",
                     value: "3 Voucher",
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const VoucherPage()),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -344,3 +361,4 @@ class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
     );
   }
 }
+
