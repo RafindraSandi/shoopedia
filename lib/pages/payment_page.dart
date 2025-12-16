@@ -15,6 +15,7 @@ class PaymentPage extends StatefulWidget {
 class _PaymentPageState extends State<PaymentPage> {
   static const shopeeOrange = Color(0xFFEE4D2D);
   Address? selectedAddress;
+  String _selectedPaymentMethod = "ShoopediaPay";
 
   @override
   void initState() {
@@ -264,28 +265,88 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Widget _paymentMethodSection() {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return GestureDetector(
+      onTap: () => _showPaymentMethodPicker(),
+      child: _card(
+        child: Column(
+          children: [
           const Text(
             "Metode Pembayaran",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 8),
+          const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
-              Text("ShoopediaPay"),
-              Switch(
-                value: true,
-                onChanged: null,
-                activeColor: shopeeOrange,
-              ),
+              Text(
+                  _selectedPaymentMethod, 
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const Icon(Icons.chevron_right, color: Colors.grey),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  // =================================================================
+  // 🔥 FUNGSI BARU 1: POPUP METODE PEMBAYARAN
+  // =================================================================
+  void _showPaymentMethodPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          child: Column(
+            children: [
+              // ... Pilihan ShopeePay ...
+              ListTile(
+                title: const Text("Transfer Bank (Virtual Account)"),
+                onTap: () {
+                  Navigator.pop(context); 
+                  _showBankSelectionPicker(); // Lanjut ke pilih bank
+                },
+              ),
+              // ... Pilihan COD ...
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // =================================================================
+  // 🔥 FUNGSI BARU 2: POPUP PILIH BANK
+  // =================================================================
+  void _showBankSelectionPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          child: Column(
+            children: [
+              _bankOption("Bank BCA", "BCA"),
+              _bankOption("Bank Mandiri", "Mandiri"),
+              _bankOption("Bank BNI", "BNI"),
+              _bankOption("Bank BRI", "BRI"),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Helper kecil untuk membuat list bank
+  Widget _bankOption(String bankName, String shortName) {
+    return ListTile(
+      title: Text(bankName),
+      onTap: () {
+        setState(() {
+          _selectedPaymentMethod = "Transfer Bank - $shortName";
+        });
+        Navigator.pop(context);
+      },
     );
   }
 
@@ -401,3 +462,4 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 }
+
