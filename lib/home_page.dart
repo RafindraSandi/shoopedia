@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shoopedia/database_helper.dart'; 
-
+import 'pages/notification_page.dart';
+import 'pages/wishlist_page.dart';     
 import 'keranjang_page.dart';
 import 'profil_page.dart';
 import 'pages/chat_list_page.dart';
@@ -115,6 +116,22 @@ class _HomePageState extends State<HomePage> {
                                     hintText: 'Cari produk...',
                                     hintStyle: TextStyle(color: mainColor.withOpacity(0.9)),
                                     border: InputBorder.none,
+                                  ),
+                                  
+                                  const SizedBox(width: 8),
+
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationPage()));
+                                    },
+                                    icon: Icon(Icons.notifications_none, color: mainColor),
+                                  ),
+            
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistPage()));
+                                    },
+                                    icon: Icon(Icons.favorite_border, color: mainColor),
                                   ),
                                 ),
                               ),
@@ -245,3 +262,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
