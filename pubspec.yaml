@@ -11,10 +11,23 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Icon bawaan
   cupertino_icons: ^1.0.8
+  
+  # Penyimpanan sederhana (opsional, tetap kita simpan untuk session login)
   shared_preferences: ^2.2.2
+  
+  # Format angka/uang/tanggal
   intl: ^0.19.0
+  
+  # Ambil gambar dari galeri/kamera
   image_picker: ^1.1.2
+
+  # --- TAMBAHAN UNTUK DATABASE LOKAL (OFFLINE) ---
+  # Mesin database SQLite
+  sqflite: ^2.3.0
+  # Helper untuk mencari lokasi folder penyimpanan di HP
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
