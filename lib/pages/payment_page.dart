@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../keranjang_page.dart'; // For CartItem
-import 'address_page.dart'; // For AddressPage
-import '../address_manager.dart'; // For AddressManager
+import '../keranjang_page.dart';   // Mundur satu folder
+import '../address_manager.dart';   // Mundur satu folder
+import 'address_page.dart';         // Sesama folder pages/
 
 class PaymentPage extends StatefulWidget {
   final List<CartItem>? selectedItems;
@@ -16,11 +16,14 @@ class _PaymentPageState extends State<PaymentPage> {
   static const shopeeOrange = Color(0xFFEE4D2D);
   Address? selectedAddress;
   String _selectedPaymentMethod = "ShoopediaPay";
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    selectedAddress = AddressManager.primaryAddress;
+    if (AddressManager.addresses.isNotEmpty) {
+      selectedAddress = AddressManager.primaryAddress;
+    }
   }
 
   int get totalAmount {
@@ -31,7 +34,50 @@ class _PaymentPageState extends State<PaymentPage> {
 
   String formatPrice(int price) {
     return price.toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
+  void _handleBuatPesanan() {
+    if (selectedAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Mohon pilih alamat pengiriman")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Column(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 60),
+              SizedBox(height: 10),
+              Text("Pembayaran Berhasil!"),
+            ],
+          ),
+          content: const Text(
+            "Pesanan Anda sedang diproses. Terima kasih!",
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Tutup dialog
+                Navigator.pop(context); // Keluar page
+              },
+              child: const Text("OK"),
+            )
+          ],
+        ),
+      );
+    });
   }
 
   @override
@@ -39,45 +85,53 @@ class _PaymentPageState extends State<PaymentPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
+        title: const Text("Checkout", style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
-        elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text(
-          "Checkout",
-          style: TextStyle(color: Colors.black),
-        ),
+        elevation: 1,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
+      body: Stack(
         children: [
-          _addressSection(),
-          const SizedBox(height: 10),
-          _productSection(),
-          const SizedBox(height: 10),
-          _voucherSection(),
-          _simpleTile("Pesan untuk Penjual", "Tinggalkan pesan"),
-          _shippingSection(),
-          const SizedBox(height: 10),
-          _paymentMethodSection(),
-          const SizedBox(height: 10),
-          _paymentDetailSection(),
-          const SizedBox(height: 90),
+          ListView(
+            padding: const EdgeInsets.all(12),
+            children: [
+              _addressSection(),
+              const SizedBox(height: 10),
+              _productSection(),
+              const SizedBox(height: 10),
+              _paymentDetailSection(),
+              const SizedBox(height: 100),
+            ],
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(child: CircularProgressIndicator(color: shopeeOrange)),
+            ),
         ],
       ),
       bottomNavigationBar: _bottomCheckoutBar(),
     );
   }
 
-  // ================= SECTIONS =================
-
+  // --- WIDGETS ---
+  
   Widget _addressSection() {
     return GestureDetector(
-      onTap: () => _showAddressSelection(),
-      child: _card(
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressPage()));
+        setState(() {
+          if (AddressManager.addresses.isNotEmpty) {
+            selectedAddress = AddressManager.primaryAddress;
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.white,
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.location_on, color: Color(0xFFEE4D2D)),
+            const Icon(Icons.location_on, color: shopeeOrange),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -85,16 +139,12 @@ class _PaymentPageState extends State<PaymentPage> {
                 children: [
                   Text(
                     selectedAddress != null
-                        ? "${selectedAddress!.fullName} (+62) ${selectedAddress!.phoneNumber}"
+                        ? "${selectedAddress!.fullName} | ${selectedAddress!.phoneNumber}"
                         : "Pilih Alamat Pengiriman",
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    selectedAddress?.fullAddress ??
-                        "Belum ada alamat yang dipilih",
-                    style: const TextStyle(color: Colors.black54),
-                  ),
+                  if (selectedAddress != null)
+                    Text(selectedAddress!.fullAddress, maxLines: 2, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
@@ -105,269 +155,66 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  void _showAddressSelection() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "Pilih Alamat Pengiriman",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            if (AddressManager.addresses.isEmpty)
-              const Text("Belum ada alamat tersimpan")
-            else
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: AddressManager.addresses.length,
-                  itemBuilder: (context, index) {
-                    final address = AddressManager.addresses[index];
-                    return RadioListTile<Address>(
-                      title: Text(address.fullName),
-                      subtitle: Text(address.fullAddress),
-                      value: address,
-                      groupValue: selectedAddress,
-                      onChanged: (value) {
-                        setState(() {
-                          selectedAddress = value;
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () async {
-                Navigator.pop(context); // Close the selection sheet
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddressPage()),
-                );
-                setState(() {
-                  selectedAddress = AddressManager.primaryAddress;
-                });
-              },
-              icon: const Icon(Icons.add),
-              label: const Text("Kelola Alamat"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: shopeeOrange,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _productSection() {
-    if (widget.selectedItems == null || widget.selectedItems!.isEmpty) {
-      return _card(
-        child: const Center(
-          child: Text("Tidak ada produk yang dipilih"),
-        ),
-      );
-    }
-    return _card(
+    if (widget.selectedItems == null || widget.selectedItems!.isEmpty) return const SizedBox();
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: widget.selectedItems!.map((item) {
-          return Column(
-            children: [
-              Row(
-                children: [
-                  Text(
-                    item.shopName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const Divider(),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      image: DecorationImage(
-                        image: item.imagePath.startsWith('http')
-                            ? NetworkImage(item.imagePath)
-                            : AssetImage(item.imagePath) as ImageProvider,
-                        fit: BoxFit.cover,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Row(
+              children: [
+                Image.network(item.imagePath, width: 60, height: 60, fit: BoxFit.cover,
+                  errorBuilder: (_,__,___) => const Icon(Icons.image, size: 60)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text("Variasi: ${item.variant}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("Rp${formatPrice(item.price)}"),
+                          Text("x${item.quantity}"),
+                        ],
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          "Rp${formatPrice(item.price)}",
-                          style: const TextStyle(
-                            color: shopeeOrange,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text("x${item.quantity}"),
-                ],
-              ),
-              if (widget.selectedItems!.last != item) const Divider(),
-            ],
+                )
+              ],
+            ),
           );
         }).toList(),
       ),
     );
   }
 
-  Widget _voucherSection() {
-    return _simpleTile("Voucher Toko", "Gunakan / masukkan kode");
-  }
-
-  Widget _shippingSection() {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            "Opsi Pengiriman",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 6),
-          Text("Reguler"),
-          SizedBox(height: 4),
-          Text(
-            "Gratis Ongkir • Estimasi 18-20 Des",
-            style: TextStyle(color: Colors.green),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _paymentMethodSection() {
-    return GestureDetector(
-      onTap: () => _showPaymentMethodPicker(),
-      child: _card(
-        child: Column(
-          children: [
-          const Text(
-            "Metode Pembayaran",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const Divider(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                  _selectedPaymentMethod, 
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // =================================================================
-  // 🔥 FUNGSI BARU 1: POPUP METODE PEMBAYARAN
-  // =================================================================
-  void _showPaymentMethodPicker() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          child: Column(
-            children: [
-              // ... Pilihan ShopeePay ...
-              ListTile(
-                title: const Text("Transfer Bank (Virtual Account)"),
-                onTap: () {
-                  Navigator.pop(context); 
-                  _showBankSelectionPicker(); // Lanjut ke pilih bank
-                },
-              ),
-              // ... Pilihan COD ...
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // =================================================================
-  // 🔥 FUNGSI BARU 2: POPUP PILIH BANK
-  // =================================================================
-  void _showBankSelectionPicker() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          child: Column(
-            children: [
-              _bankOption("Bank BCA", "BCA"),
-              _bankOption("Bank Mandiri", "Mandiri"),
-              _bankOption("Bank BNI", "BNI"),
-              _bankOption("Bank BRI", "BRI"),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // Helper kecil untuk membuat list bank
-  Widget _bankOption(String bankName, String shortName) {
-    return ListTile(
-      title: Text(bankName),
-      onTap: () {
-        setState(() {
-          _selectedPaymentMethod = "Transfer Bank - $shortName";
-        });
-        Navigator.pop(context);
-      },
-    );
-  }
-
   Widget _paymentDetailSection() {
-    return _card(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Rincian Pembayaran",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          const Text("Rincian Pembayaran", style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          _priceRow("Total Produk", "Rp${totalAmount}"),
-          _priceRow("Total Ongkos Kirim", "Rp0"),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text("Subtotal Produk"),
+            Text("Rp${formatPrice(totalAmount)}"),
+          ]),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text("Biaya Layanan"),
+            const Text("Rp1.000"),
+          ]),
           const Divider(),
-          _priceRow(
-            "Total Pembayaran",
-            "Rp${totalAmount}",
-            isTotal: true,
-          ),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text("Total Pembayaran", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text("Rp${formatPrice(totalAmount + 1000)}", style: const TextStyle(color: shopeeOrange, fontWeight: FontWeight.bold, fontSize: 16)),
+          ]),
         ],
       ),
     );
@@ -375,91 +222,27 @@ class _PaymentPageState extends State<PaymentPage> {
 
   Widget _bottomCheckoutBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 5),
-        ],
-      ),
+      padding: const EdgeInsets.all(16),
+      color: Colors.white,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Text("Total Pembayaran"),
-              Text(
-                "Rp${formatPrice(totalAmount)}",
-                style: const TextStyle(
-                  color: shopeeOrange,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+              Text("Rp${formatPrice(totalAmount + 1000)}", style: const TextStyle(color: shopeeOrange, fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
+          const SizedBox(width: 16),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: shopeeOrange,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            onPressed: () {},
-            child: const Text("Buat Pesanan"),
+            onPressed: _isLoading ? null : _handleBuatPesanan,
+            style: ElevatedButton.styleFrom(backgroundColor: shopeeOrange),
+            child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Buat Pesanan", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
-    );
-  }
-
-  // ================= REUSABLE =================
-
-  Widget _simpleTile(String title, String subtitle) {
-    return _card(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title),
-          Row(
-            children: [
-              Text(subtitle, style: const TextStyle(color: Colors.black54)),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _priceRow(String label, String price, {bool isTotal = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(
-            price,
-            style: TextStyle(
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? shopeeOrange : Colors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _card({required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: child,
     );
   }
 }
-
