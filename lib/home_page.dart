@@ -8,6 +8,7 @@ import 'profil_page.dart';
 import 'pages/chat_list_page.dart';
 import 'pages/product_detail_page.dart';
 import 'pages/models/product.dart'; 
+import 'pages/shop_bot_page.dart'; 
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -249,6 +250,18 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: _getBody(),
+      floatingActionButton: _selectedIndex == 0 ? FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ShopBotPage()),
+          );
+        },
+        backgroundColor: const Color(0xFFEE4D2D), // Warna Oranye Shopee
+        elevation: 4,
+        tooltip: 'Tanya Shop Bot',
+        child: const Icon(Icons.smart_toy_outlined, color: Colors.white, size: 28),
+      ) : null,
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         selectedItemColor: mainColor,
@@ -262,4 +275,5 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
 
