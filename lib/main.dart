@@ -1,8 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'splash_screen.dart'; // Hanya perlu import ini
+import 'user_manager.dart'; // Import UserManager
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Load user data from shared preferences
+  await UserManager.loadUserData();
   runApp(const MyApp());
 }
 
@@ -22,4 +25,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
