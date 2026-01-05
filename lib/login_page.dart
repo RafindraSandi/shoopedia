@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shoopedia/database_helper.dart'; // Panggil DB
+import 'dart:convert'; // PENTING: Untuk membaca daftar data
 import 'register_page.dart';
 import 'home_page.dart';
+import 'user_manager.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,7 +15,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  
+
   bool _isObscure = true;
   bool _isButtonActive = false;
 
@@ -27,37 +28,46 @@ class _LoginPageState extends State<LoginPage> {
 
   void _updateButtonState() {
     setState(() {
-      _isButtonActive = _usernameController.text.isNotEmpty && _passwordController.text.isNotEmpty;
+      _isButtonActive = _usernameController.text.isNotEmpty &&
+          _passwordController.text.isNotEmpty;
     });
   }
 
-  // PROSES LOGIN
+  // FUNGSI LOGIN: MENCARI DATA DI DALAM LIST
   Future<void> _handleLogin() async {
     String emailInput = _usernameController.text;
     String passwordInput = _passwordController.text;
 
-    // Cek ke Database Lokal (SQLite)
-    // Ini akan mendeteksi akun 'faisal' dan 'testing' yang sudah kita tanam
-    var user = await DatabaseHelper.instance.loginUser(emailInput, passwordInput);
+    // Ambil Daftar Semua User dari HP (Shared Preferences)
+    final prefs = await SharedPreferences.getInstance();
+    String? existingUsersString = prefs.getString('all_users');
 
-    if (user != null) {
-      // Login Sukses
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('userName', user['name']);
-      
-      print("Login Berhasil sebagai: ${user['name']}");
-      
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Selamat Datang, ${user['name']}!")),
-      );
+    bool isFound = false;
+    Map<String, dynamic>? foundUser;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
+    // Jika ada datanya, kita cari satu per satu
+    if (existingUsersString != null) {
+      List<dynamic> userList = jsonDecode(existingUsersString);
+
+      // Loop (Perulangan) untuk mengecek setiap akun yang tersimpan
+      for (var user in userList) {
+        if ((user['email'] == emailInput ||
+                user['username'] == emailInput ||
+                user['phone'] == emailInput ||
+                user['fullName'] == emailInput) &&
+            user['password'] == passwordInput) {
+          isFound = true;
+          foundUser = user;
+          break; // Ketemu! Berhenti mencari
+        }
+      }
+    }
+
+    // Keputusan Akhir
+    if (isFound && foundUser != null) {
+      UserManager.setCurrentUserFromMap(foundUser);
+      _goToHome();
     } else {
-      // Login Gagal
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -66,6 +76,14 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     }
+  }
+
+  void _goToHome() {
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomePage()),
+    );
   }
 
   @override
@@ -84,9 +102,15 @@ class _LoginPageState extends State<LoginPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        // Tombol back dihapus karena ini halaman awal
-        automaticallyImplyLeading: false, 
-        title: const Text("Log In", style: TextStyle(color: Colors.black, fontSize: 20)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: mainColor),
+          onPressed: () {
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => const RegisterPage()));
+          },
+        ),
+        title: const Text("Log In",
+            style: TextStyle(color: Colors.black, fontSize: 20)),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -95,21 +119,19 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               const SizedBox(height: 40),
               const Icon(Icons.shopping_bag, size: 70, color: mainColor),
-              const SizedBox(height: 10),
-              const Text("Shoopedia", style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 30),
-              
+              const SizedBox(height: 40),
               TextField(
                 controller: _usernameController,
                 decoration: InputDecoration(
-                  hintText: "Email",
-                  prefixIcon: const Icon(Icons.person_outline),
-                  enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                  focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: mainColor)),
+                  hintText: "No. Handphone/Email/Username",
+                  prefixIcon: const Icon(Icons.email),
+                  enabledBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey)),
+                  focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: mainColor)),
                 ),
               ),
               const SizedBox(height: 20),
-              
               TextField(
                 controller: _passwordController,
                 obscureText: _isObscure,
@@ -117,30 +139,33 @@ class _LoginPageState extends State<LoginPage> {
                   hintText: "Password",
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_isObscure ? Icons.visibility_off : Icons.visibility),
+                    icon: Icon(
+                        _isObscure ? Icons.visibility_off : Icons.visibility),
                     onPressed: () => setState(() => _isObscure = !_isObscure),
                   ),
-                  enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                  focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: mainColor)),
+                  enabledBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey)),
+                  focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: mainColor)),
                 ),
               ),
               const SizedBox(height: 30),
-              
               SizedBox(
                 width: double.infinity,
                 height: 45,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isButtonActive ? mainColor : Colors.grey[300],
+                    backgroundColor:
+                        _isButtonActive ? mainColor : Colors.grey[300],
                     elevation: 0,
                   ),
-                  onPressed: _isButtonActive ? _handleLogin : null, 
+                  onPressed: _isButtonActive ? _handleLogin : null,
                   child: Text(
-                    "Log In", 
+                    "Log In",
                     style: TextStyle(
-                      color: _isButtonActive ? Colors.white : Colors.grey[600], 
-                      fontSize: 16
-                    ),
+                        color:
+                            _isButtonActive ? Colors.white : Colors.grey[600],
+                        fontSize: 16),
                   ),
                 ),
               ),
@@ -154,7 +179,8 @@ class _LoginPageState extends State<LoginPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("Belum punya akun? ", style: TextStyle(color: Colors.grey)),
+            const Text("Belum punya akun? ",
+                style: TextStyle(color: Colors.grey)),
             InkWell(
               onTap: () {
                 Navigator.push(
@@ -166,7 +192,10 @@ class _LoginPageState extends State<LoginPage> {
                 padding: EdgeInsets.all(8.0),
                 child: Text(
                   "Daftar",
-                  style: TextStyle(color: mainColor, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(
+                      color: mainColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
                 ),
               ),
             ),
