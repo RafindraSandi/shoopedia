@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../wishlist_manager.dart';
 
 class WishlistPage extends StatefulWidget {
   const WishlistPage({super.key});
@@ -8,20 +9,6 @@ class WishlistPage extends StatefulWidget {
 }
 
 class _WishlistPageState extends State<WishlistPage> {
-  // Data Dummy Barang Favorit
-  List<Map<String, dynamic>> wishlistItems = [
-    {
-      "name": "Sepatu Lari Pria Import",
-      "price": "Rp 150.000",
-      "image": "https://img.lazcdn.com/g/p/2b26740520795b6cc4a47a247a30f2b4.jpg_720x720q80.jpg", 
-    },
-    {
-      "name": "Headset Bluetooth Gaming",
-      "price": "Rp 85.000",
-      "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSYLN2Idizgl-iqMyPzl_qXL5dE9-6sJnRQxA&s",
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,17 +18,20 @@ class _WishlistPageState extends State<WishlistPage> {
         foregroundColor: Colors.black,
         elevation: 0.5,
       ),
-      body: wishlistItems.isEmpty
+      body: WishlistManager.wishlistItems.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.favorite_border, size: 80, color: Colors.grey),
+                  const Icon(Icons.favorite_border,
+                      size: 80, color: Colors.grey),
                   const SizedBox(height: 10),
-                  const Text("Belum ada produk favorit", style: TextStyle(color: Colors.grey)),
+                  const Text("Belum ada produk favorit",
+                      style: TextStyle(color: Colors.grey)),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text("Cari Barang", style: TextStyle(color: Color(0xFFEE4D2D))),
+                    child: const Text("Cari Barang",
+                        style: TextStyle(color: Color(0xFFEE4D2D))),
                   )
                 ],
               ),
@@ -54,15 +44,16 @@ class _WishlistPageState extends State<WishlistPage> {
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
-              itemCount: wishlistItems.length,
+              itemCount: WishlistManager.wishlistItems.length,
               itemBuilder: (context, index) {
-                final item = wishlistItems[index];
+                final item = WishlistManager.wishlistItems[index];
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
-                      BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 4),
+                      BoxShadow(
+                          color: Colors.grey.withOpacity(0.1), blurRadius: 4),
                     ],
                   ),
                   child: Column(
@@ -70,12 +61,14 @@ class _WishlistPageState extends State<WishlistPage> {
                     children: [
                       Expanded(
                         child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(8)),
                           child: Image.network(
-                            item['image'],
+                            item.image,
                             fit: BoxFit.cover,
                             width: double.infinity,
-                            errorBuilder: (ctx, error, stack) => const Icon(Icons.image_not_supported),
+                            errorBuilder: (ctx, error, stack) =>
+                                const Icon(Icons.image_not_supported),
                           ),
                         ),
                       ),
@@ -85,16 +78,17 @@ class _WishlistPageState extends State<WishlistPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              item['name'],
+                              item.name,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 12),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              item['price'],
+                              item.price,
                               style: const TextStyle(
-                                  color: Color(0xFFEE4D2D), fontWeight: FontWeight.bold),
+                                  color: Color(0xFFEE4D2D),
+                                  fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -104,21 +98,25 @@ class _WishlistPageState extends State<WishlistPage> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                            icon: const Icon(Icons.delete_outline,
+                                color: Colors.grey),
                             onPressed: () {
                               setState(() {
-                                wishlistItems.removeAt(index);
+                                WishlistManager.removeFromWishlist(item.name);
                               });
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Dihapus dari favorit")),
+                                const SnackBar(
+                                    content: Text("Dihapus dari favorit")),
                               );
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFFEE4D2D)),
+                            icon: const Icon(Icons.shopping_cart_outlined,
+                                color: Color(0xFFEE4D2D)),
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Masuk keranjang!")),
+                                const SnackBar(
+                                    content: Text("Masuk keranjang!")),
                               );
                             },
                           ),
