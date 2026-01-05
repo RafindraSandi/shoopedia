@@ -1,12 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shoopedia/pages/edit_profile_page.dart';
 import 'package:shoopedia/pages/settings_page.dart';
 import 'package:shoopedia/pages/address_page.dart';
 import 'package:shoopedia/pages/payment_page.dart';
 import 'package:shoopedia/pages/voucher_page.dart';
-import 'package:shoopedia/pages/pesanan_page.dart'; // <<< DITAMBAHKAN
-import 'package:shoopedia/pages/shopeepay_page.dart';
-import 'package:shoopedia/pages/shopee_coins_page.dart';
+import 'package:shoopedia/pages/pesanan_page.dart';
+import 'package:shoopedia/pages/shopeediaPay_page.dart';
+import 'package:shoopedia/pages/coin_page.dart';
+import 'package:shoopedia/pages/verification_form_page.dart';
+import 'package:shoopedia/pages/store_management_page.dart';
+import 'user_manager.dart';
 
 class ShopeediaProfilePage extends StatefulWidget {
   const ShopeediaProfilePage({super.key});
@@ -16,7 +20,7 @@ class ShopeediaProfilePage extends StatefulWidget {
 }
 
 class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
-  final Color mainColor = const Color(0xFFEE4D2D); // warna utama
+  final Color mainColor = const Color(0xFFEE4D2D);
   double _scale = 1.0;
 
   void animateButton(VoidCallback onTap) {
@@ -50,18 +54,32 @@ class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
                   color: mainColor,
                   child: Row(
                     children: [
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 35,
                         backgroundColor: Colors.white,
-                        child: Icon(Icons.person, size: 40, color: Colors.grey),
+                        backgroundImage: UserManager
+                                        .currentUser.profileImagePath !=
+                                    null &&
+                                UserManager
+                                    .currentUser.profileImagePath!.isNotEmpty
+                            ? FileImage(
+                                File(UserManager.currentUser.profileImagePath!))
+                            : null,
+                        child:
+                            UserManager.currentUser.profileImagePath == null ||
+                                    UserManager
+                                        .currentUser.profileImagePath!.isEmpty
+                                ? const Icon(Icons.person,
+                                    size: 40, color: Colors.grey)
+                                : null,
                       ),
                       const SizedBox(width: 15),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "rafindrasandi123",
-                            style: TextStyle(
+                          Text(
+                            UserManager.currentUser.fullName,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -159,25 +177,13 @@ class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
                 title: "Pesanan Saya",
                 children: [
                   orderMenu(
-                    icon: Icons.receipt_long,
-                    title: "Belum Bayar",
+                    icon: Icons.inventory_2,
+                    title: "Dikemas",
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => const PesananPage(initialTab: 0),
-                        ),
-                      );
-                    },
-                  ),
-                  orderMenu(
-                    icon: Icons.pending_actions,
-                    title: "Diproses",
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PesananPage(initialTab: 1),
                         ),
                       );
                     },
@@ -189,14 +195,26 @@ class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
+                          builder: (_) => const PesananPage(initialTab: 1),
+                        ),
+                      );
+                    },
+                  ),
+                  orderMenu(
+                    icon: Icons.check_circle,
+                    title: "Pesanan Selesai",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
                           builder: (_) => const PesananPage(initialTab: 2),
                         ),
                       );
                     },
                   ),
                   orderMenu(
-                    icon: Icons.star_rate,
-                    title: "Selesaikan Pesanan",
+                    icon: Icons.refresh,
+                    title: "Pengembalian",
                     onTap: () {
                       Navigator.push(
                         context,
@@ -220,22 +238,24 @@ class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
                   walletMenu(
                     icon: Icons.account_balance_wallet,
                     title: "Saldo ShopeediaPay",
-                    value: "Rp 0",
+                    value: "Rp 1.540.000",
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ShopeediaPayPage()),
+                        MaterialPageRoute(
+                            builder: (_) => const ShopeediaPayPage()),
                       );
                     },
                   ),
                   walletMenu(
                     icon: Icons.monetization_on,
                     title: "Koin Shopeedia",
-                    value: "20 Koin",
+                    value: "2500 Koin",
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ShopeeCoinsPage()),
+                        MaterialPageRoute(
+                            builder: (_) => const ShopeeCoinsPage()),
                       );
                     },
                   ),
@@ -251,6 +271,72 @@ class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
                     },
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // ==================================================
+              // MULAI JUAL / KELOLA TOKO
+              // ==================================================
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: mainColor,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: InkWell(
+                  onTap: () {
+                    if (!UserManager.currentUser.isSeller) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const VerificationFormPage()),
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const StoreManagementPage()),
+                      );
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      const Icon(Icons.store, color: Colors.white, size: 30),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              UserManager.currentUser.isSeller
+                                  ? "Kelola Toko"
+                                  : "Mulai Jual",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              UserManager.currentUser.isSeller
+                                  ? "Kelola produk dan toko Anda"
+                                  : "Jadilah penjual dan mulai berjualan produk Anda",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, color: Colors.white),
+                    ],
+                  ),
+                ),
               ),
 
               const SizedBox(height: 30),
@@ -361,4 +447,3 @@ class _ShopeediaProfilePageState extends State<ShopeediaProfilePage> {
     );
   }
 }
-
