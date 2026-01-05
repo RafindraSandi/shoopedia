@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../user_manager.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -12,13 +13,6 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
-
-  // Profile data
-  String _username = 'rafindrasandi123';
-  String _fullName = 'Rafindra Sandi';
-  String _email = 'rafindra@example.com';
-  String _phone = '081234567890';
-  String _bio = 'Pelanggan setia Shoopedia';
 
   // Controllers
   late TextEditingController _usernameController;
@@ -32,11 +26,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: _username);
-    _fullNameController = TextEditingController(text: _fullName);
-    _emailController = TextEditingController(text: _email);
-    _phoneController = TextEditingController(text: _phone);
-    _bioController = TextEditingController(text: _bio);
+    // Load current user data
+    final user = UserManager.currentUser;
+    _usernameController = TextEditingController(text: user.username);
+    _fullNameController = TextEditingController(text: user.fullName);
+    _emailController = TextEditingController(text: user.email);
+    _phoneController = TextEditingController(text: user.phone);
+    _bioController = TextEditingController(text: user.bio);
+
+    // Load existing profile image if available
+    if (user.profileImagePath != null && user.profileImagePath!.isNotEmpty) {
+      _profileImage = File(user.profileImagePath!);
+    }
   }
 
   @override
@@ -105,14 +106,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _saveProfile() {
     if (_formKey.currentState?.validate() ?? false) {
-      // Save profile data
-      setState(() {
-        _username = _usernameController.text;
-        _fullName = _fullNameController.text;
-        _email = _emailController.text;
-        _phone = _phoneController.text;
-        _bio = _bioController.text;
-      });
+      // Update profile data using UserManager
+      UserManager.updateProfile(
+        username: _usernameController.text,
+        fullName: _fullNameController.text,
+        email: _emailController.text,
+        phone: _phoneController.text,
+        bio: _bioController.text,
+        profileImagePath: _profileImage?.path,
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profil berhasil diperbarui')),
@@ -294,15 +296,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     TextFormField(
                       controller: _bioController,
                       decoration: const InputDecoration(
-                        labelText: 'Bio',
+                        labelText: 'Bio (Opsional)',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.info_outline),
                       ),
                       maxLines: 3,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Bio tidak boleh kosong';
-                        }
+                        // Bio is optional, no validation required
                         return null;
                       },
                     ),
