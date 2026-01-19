@@ -41,7 +41,7 @@ class _RegisterPageState extends State<RegisterPage> {
     });
   }
 
-  // FUNGSI: PROSES REGISTER
+// FUNGSI: PROSES REGISTER
   Future<void> _handleRegister() async {
     // 1. Validasi Input Dasar
     String username = _usernameController.text.trim();
@@ -77,8 +77,8 @@ class _RegisterPageState extends State<RegisterPage> {
         }
       }
 
-      // 2. CEK DUPLIKASI (PENTING)
-      // Kita cek apakah username atau email sudah pernah dipakai
+// 2. CEK DUPLIKASI
+      // Cek apakah username atau email sudah ada di database
       bool isDuplicate = userList.any((user) =>
           user['username'] == username || user['email'] == email);
 
@@ -86,37 +86,50 @@ class _RegisterPageState extends State<RegisterPage> {
         if (!mounted) return;
         _showSnackBar("Username atau Email sudah terdaftar!", Colors.orange);
         setState(() => _isLoading = false);
-        return;
+        return; // Stop proses
       }
 
-      // 3. Simpan Data Baru
-      Map<String, String> newUser = {
+// 3. SIMPAN DATA BARU
+      // Gunakan Map<String, dynamic> agar bisa simpan boolean & angka
+      Map<String, dynamic> newUser = {
         "username": username,
         "fullName": fullName,
         "email": email,
         "phone": phone,
         "password": password,
-        "bio": "Pengguna baru Shoopedia", // Default bio
+        "bio": "Pengguna baru Shoopedia",
+        
+        // Field tambahan untuk masa depan (Toko & Saldo)
+        "isSeller": false,  // Default: Bukan penjual
+        "balance": 0,       // Default: Saldo 0
+        "role": "user",     // Default role
+        "createdAt": DateTime.now().toIso8601String(),
       };
 
+      // Masukkan user baru ke list
       userList.add(newUser);
+
+      // Simpan list yang sudah diupdate ke penyimpanan HP
       await prefs.setString('all_users', jsonEncode(userList));
 
-      // Simulasi delay sedikit
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Simulasi delay biar berasa prosesnya
+      await Future.delayed(const Duration(milliseconds: 1000));
 
       if (!mounted) return;
-      _showSnackBar("Akun berhasil dibuat! Silakan Login.", Colors.green);
+      // 4. SUKSES
+    _showSnackBar("Akun berhasil dibuat! Silakan Login.", Colors.green);
 
-      // Pindah ke halaman Login
+      // Pindah ke halaman Login (Replacement agar tidak bisa back ke register)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LoginPage()),
       );
+
     } catch (e) {
       if (!mounted) return;
       _showSnackBar("Gagal mendaftar: $e", Colors.red);
     } finally {
+      // Pastikan loading berhenti apapun yang terjadi
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -289,3 +302,4 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
+
