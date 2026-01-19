@@ -18,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isObscure = true;
   bool _isButtonActive = false;
-  bool _isLoading = false; // TAMBAHAN: Biar tombol bisa loading
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -35,12 +35,12 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
-    // UPDATE: Pakai trim() untuk buang spasi tidak sengaja di depan/belakang
+    // 1. Bersihkan input dari spasi yang tidak perlu
     String emailInput = _usernameController.text.trim();
     String passwordInput = _passwordController.text.trim();
 
     setState(() {
-      _isLoading = true; // Mulai loading
+      _isLoading = true;
     });
 
     try {
@@ -51,12 +51,11 @@ class _LoginPageState extends State<LoginPage> {
       Map<String, dynamic>? foundUser;
 
       if (existingUsersString != null) {
-        // UPDATE: Bungkus decode pakai try-catch biar gak crash kalau data corrupt
         try {
           List<dynamic> userList = jsonDecode(existingUsersString);
 
+          // 2. Loop cari user yang cocok
           for (var user in userList) {
-            // Pastikan key-nya ada dulu pakai cek sederhana atau null check
             String uEmail = user['email'] ?? '';
             String uUsername = user['username'] ?? '';
             String uPhone = user['phone'] ?? '';
@@ -78,13 +77,18 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
 
-      // Simulasi delay dikit biar kerasa "mikir" (opsional)
+      // Simulasi loading
       await Future.delayed(const Duration(milliseconds: 500));
 
+      // 3. KEPUTUSAN LOGIN
       if (isFound && foundUser != null) {
-        // Simpan data user yang login (PENTING biar di Home gak kosong)
+        // A. Simpan ke Memory (biar aplikasi tau siapa yg login skrg)
         await UserManager.setCurrentUserFromMap(foundUser);
-        
+
+        // B. SIMPAN SESI KE HP (PENTING BUAT AUTO-LOGIN DI SPLASH SCREEN)
+        // 
+        await prefs.setString('current_user', jsonEncode(foundUser)); 
+
         _goToHome();
       } else {
         if (!mounted) return;
@@ -94,7 +98,6 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       _showSnackBar("Terjadi kesalahan sistem: $e", Colors.red);
     } finally {
-      // Selesai loading, kembalikan state
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -137,10 +140,9 @@ class _LoginPageState extends State<LoginPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        // UPDATE: Leading logic sedikit dirapikan
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: mainColor),
-          onPressed: () => Navigator.of(context).pop(), // Lebih aman pakai pop kalau cuma back
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text("Log In",
             style: TextStyle(color: Colors.black, fontSize: 20)),
@@ -157,9 +159,8 @@ class _LoginPageState extends State<LoginPage> {
               // FIELD USERNAME
               TextField(
                 controller: _usernameController,
-                // UPDATE: Set keyboard type biar tombol @ muncul (UX)
-                keyboardType: TextInputType.emailAddress, 
-                textInputAction: TextInputAction.next, // Biar tombol enter jadi "Next"
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
                   hintText: "No. Handphone/Email/Username",
                   prefixIcon: const Icon(Icons.email),
@@ -175,8 +176,8 @@ class _LoginPageState extends State<LoginPage> {
               TextField(
                 controller: _passwordController,
                 obscureText: _isObscure,
-                textInputAction: TextInputAction.done, // Tombol enter jadi "Done/Check"
-                onSubmitted: (_) => _isButtonActive ? _handleLogin() : null, // Enter langsung login
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _isButtonActive ? _handleLogin() : null,
                 decoration: InputDecoration(
                   hintText: "Password",
                   prefixIcon: const Icon(Icons.lock_outline),
@@ -203,22 +204,21 @@ class _LoginPageState extends State<LoginPage> {
                         _isButtonActive ? mainColor : Colors.grey[300],
                     elevation: 0,
                   ),
-                  // UPDATE: Cek _isLoading agar tidak double click
                   onPressed: (_isButtonActive && !_isLoading) ? _handleLogin : null,
-                  child: _isLoading 
-                    ? const SizedBox(
-                        height: 20, 
-                        width: 20, 
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                      )
-                    : Text(
-                        "Log In",
-                        style: TextStyle(
-                            color: _isButtonActive
-                                ? Colors.white
-                                : Colors.grey[600],
-                            fontSize: 16),
-                      ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Text(
+                          "Log In",
+                          style: TextStyle(
+                              color: _isButtonActive
+                                  ? Colors.white
+                                  : Colors.grey[600],
+                              fontSize: 16),
+                        ),
                 ),
               ),
             ],
