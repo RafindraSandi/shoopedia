@@ -1,8 +1,8 @@
 // home_page.dart
 import 'dart:io' as io;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // PENTING: Tambahkan ini di pubspec.yaml jika belum ada
 
-// Pastikan file-file ini ada di project Anda
 import 'keranjang_page.dart';
 import 'profil_page.dart';
 import 'login_page.dart';
@@ -25,9 +25,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final Color mainColor = const Color(0xFFEE4D2D);
   int _selectedIndex = 0;
-
-  // 1. TAMBAHKAN VARIABEL INI UNTUK MENAMPUNG TEKS PENCARIAN
   String _searchQuery = "";
+
+  // Formatter untuk mengubah angka 10000 menjadi "Rp10.000"
+  final currencyFormatter =
+      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
 
   Widget buildImageWidget(String url,
       {BoxFit fit = BoxFit.cover, double? width, double? height}) {
@@ -59,28 +61,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  String _calculateDiscountedPrice(String originalPrice, String discount) {
-    // Parse original price (remove 'Rp' and '.')
-    final priceString = originalPrice.replaceAll('Rp', '').replaceAll('.', '');
-    final price = int.parse(priceString);
-
-    // Parse discount percentage (remove '%')
-    final discountPercent = double.parse(discount.replaceAll('%', ''));
-
-    // Calculate discounted price
-    final discountAmount = price * (discountPercent / 100);
-    final discountedPrice = price - discountAmount.toInt();
-
-    // Format back to 'Rp xxx.xxx'
-    final formattedPrice = discountedPrice.toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
-    return 'Rp $formattedPrice';
+  // UPDATE: Menghitung harga diskon dari Integer
+  String _calculateDiscountedPrice(int originalPrice, int discountPercent) {
+    double discountAmount = originalPrice * (discountPercent / 100);
+    int finalPrice = originalPrice - discountAmount.toInt();
+    return currencyFormatter.format(finalPrice);
   }
 
   Widget _getBody() {
-    // Check if user is logged in (not using default username)
+    // Cek Login dummy
     if (UserManager.currentUser.username == "rafindrasandi123") {
-      // Redirect to login if not authenticated
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
           context,
@@ -91,14 +81,13 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (_selectedIndex == 0) {
-      // 2. LOGIKA FILTER PRODUK DISINI
-      // Gabungkan produk default dengan produk dari seller
+      // Gabungkan produk data asli + produk seller
       final List<Product> allProducts = [
         ...ProductsData.products,
         ...UserManager.getAllSellerProducts(),
       ];
 
-      // Kita buat list baru bernama filteredProducts berdasarkan _searchQuery
+      // Filter Pencarian
       final List<Product> filteredProducts = allProducts.where((item) {
         final nameLower = item.name.toLowerCase();
         final queryLower = _searchQuery.toLowerCase();
@@ -107,6 +96,7 @@ class _HomePageState extends State<HomePage> {
 
       return CustomScrollView(
         slivers: [
+          // --- APP BAR & SEARCH ---
           SliverAppBar(
             pinned: true,
             backgroundColor: Colors.white,
@@ -137,7 +127,6 @@ class _HomePageState extends State<HomePage> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: TextField(
-                                  // 3. UPDATE _searchQuery SAAT MENGETIK
                                   onChanged: (value) {
                                     setState(() {
                                       _searchQuery = value;
@@ -156,46 +145,37 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // ICONS
                       IconButton(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const KeranjangPage()),
-                          );
-                        },
+                                builder: (context) => const KeranjangPage())),
                         icon: Icon(Icons.shopping_cart_outlined,
                             color: mainColor),
                       ),
                       IconButton(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const ChatListPage()),
-                          );
-                        },
+                                builder: (context) => const ChatListPage())),
                         icon: Icon(Icons.chat_bubble_outline, color: mainColor),
                       ),
                       IconButton(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const WishlistPage()),
-                          );
-                        },
+                                builder: (context) => const WishlistPage())),
                         icon: Icon(Icons.favorite_border, color: mainColor),
                       ),
                       IconButton(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const NotificationPage()),
-                          );
-                        },
-                        icon: Icon(Icons.notifications_none, color: mainColor),
+                                builder: (context) =>
+                                    const NotificationPage())),
+                        icon:
+                            Icon(Icons.notifications_none, color: mainColor),
                       ),
                     ],
                   ),
@@ -204,7 +184,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // 4. JIKA HASIL PENCARIAN KOSONG
+          // --- SEARCH EMPTY STATE ---
           if (filteredProducts.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
@@ -222,13 +202,12 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-          // 5. GRID PRODUK (Gunakan filteredProducts)
+          // --- PRODUCT GRID ---
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             sliver: SliverGrid(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  // Gunakan filteredProducts, bukan products
                   final product = filteredProducts[index];
                   return InkWell(
                     onTap: () {
@@ -255,6 +234,7 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // GAMBAR PRODUK
                           Expanded(
                             child: ClipRRect(
                               borderRadius: const BorderRadius.vertical(
@@ -263,7 +243,8 @@ class _HomePageState extends State<HomePage> {
                                 fit: StackFit.expand,
                                 children: [
                                   buildImageWidget(product.image),
-                                  if (product.discount != null)
+                                  // LABEL DISKON (Cek jika diskon > 0)
+                                  if (product.discount > 0)
                                     Positioned(
                                       top: 6,
                                       right: 6,
@@ -275,7 +256,7 @@ class _HomePageState extends State<HomePage> {
                                             borderRadius:
                                                 BorderRadius.circular(4)),
                                         child: Text(
-                                          product.discount!,
+                                          "${product.discount}%", // Tampilkan %
                                           style: TextStyle(
                                             color: mainColor,
                                             fontWeight: FontWeight.bold,
@@ -288,6 +269,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                           ),
+                          // INFO PRODUK
                           Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 8),
@@ -301,51 +283,52 @@ class _HomePageState extends State<HomePage> {
                                   style: const TextStyle(fontSize: 13),
                                 ),
                                 const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: product.discount != null
-                                          ? Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  product.price,
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                    decoration: TextDecoration
-                                                        .lineThrough,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  _calculateDiscountedPrice(
-                                                      product.price,
-                                                      product.discount!),
-                                                  style: TextStyle(
-                                                    color: mainColor,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                          : Text(
-                                              product.price,
-                                              style: TextStyle(
-                                                color: mainColor,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                    ),
-                                    Text(
-                                      product.sold,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
+                                
+                                // LOGIKA HARGA (Diskon vs Normal)
+                                if (product.discount > 0)
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Harga Coret
+                                      Text(
+                                        currencyFormatter.format(product.price),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                          color: Colors.grey,
+                                        ),
                                       ),
+                                      // Harga Diskon
+                                      Text(
+                                        _calculateDiscountedPrice(product.price,
+                                            product.discount),
+                                        style: TextStyle(
+                                          color: mainColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else
+                                  // Harga Normal
+                                  Text(
+                                    currencyFormatter.format(product.price),
+                                    style: TextStyle(
+                                      color: mainColor,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                  ],
+                                  ),
+                                  
+                                const SizedBox(height: 4),
+                                Text(
+                                  product.sold,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ],
                             ),
@@ -355,8 +338,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                 },
-                childCount:
-                    filteredProducts.length, // Gunakan panjang hasil filter
+                childCount: filteredProducts.length,
               ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -366,7 +348,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-
           const SliverToBoxAdapter(child: SizedBox(height: 68)),
         ],
       );
@@ -396,9 +377,7 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         backgroundColor: Colors.white,
         currentIndex: _selectedIndex,
-        onTap: (i) {
-          setState(() => _selectedIndex = i);
-        },
+        onTap: (i) => setState(() => _selectedIndex = i),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Saya"),
