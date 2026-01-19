@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../order_manager.dart';
 import '../products_data.dart';
 import '../keranjang_page.dart';
+import '../cart_manager.dart'; // PENTING: Tambahkan ini
 import 'product_detail_page.dart';
 import 'models/product.dart';
 
@@ -69,9 +70,16 @@ class _PesananPageState extends State<PesananPage>
   // ===================================================================
   Widget buildEmptyTab(String title) {
     return Center(
-      child: Text(
-        "Tidak ada pesanan $title",
-        style: const TextStyle(fontSize: 16, color: Colors.grey),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.list_alt, size: 80, color: Colors.grey),
+          const SizedBox(height: 10),
+          Text(
+            "Tidak ada pesanan $title",
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
       ),
     );
   }
@@ -96,96 +104,6 @@ class _PesananPageState extends State<PesananPage>
           child: orderCardFromOrder(order),
         );
       },
-    );
-  }
-
-  // ===================================================================
-  // Kartu Pesanan
-  // ===================================================================
-  Widget orderCard({
-    required String toko,
-    required String status,
-    required String gambar,
-    required String nama,
-    required String total,
-    required int qty,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          )
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header toko
-          ListTile(
-            leading: const Icon(Icons.store, color: Colors.red),
-            title:
-                Text(toko, style: const TextStyle(fontWeight: FontWeight.bold)),
-            trailing: Text(
-              status,
-              style: TextStyle(color: mainColor, fontWeight: FontWeight.bold),
-            ),
-          ),
-
-          // Produk
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    gambar,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    nama,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Text("x$qty"),
-              ],
-            ),
-          ),
-
-          const Divider(),
-
-          // Total harga
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                "Total $qty produk: $total",
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-          // Tombol
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: _buildOrderButtons(status),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -220,11 +138,13 @@ class _PesananPageState extends State<PesananPage>
             ),
           ),
 
-          // Produk-produk dalam order dengan total dan tombol per produk
+          const Divider(height: 1),
+
+          // Produk-produk dalam order
           ...order.items.map((item) {
             return Column(
               children: [
-                // Produk
+                // Produk Info
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
@@ -233,87 +153,179 @@ class _PesananPageState extends State<PesananPage>
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
                           item.imagePath,
-                          width: 80,
-                          height: 80,
+                          width: 70,
+                          height: 70,
                           fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                  width: 70,
+                                  height: 70,
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.image_not_supported)),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          item.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 4),
+                            Text("Variasi: ${item.variant}",
+                                style: TextStyle(
+                                    color: Colors.grey[600], fontSize: 12)),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text("x${item.quantity}"),
+                                Text(
+                                  formatPrice(item.price),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      Text("x${item.quantity}"),
                     ],
                   ),
                 ),
 
-                // Total harga per produk
+                // Tombol Aksi Per Produk (Beli Lagi / Nilai)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      "Total: ${formatPrice(item.price * item.quantity)}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-
-                // Tombol per produk
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   child: Row(
-                    mainAxisAlignment: order.status == "Selesai"
-                        ? MainAxisAlignment.spaceEvenly
-                        : MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: _buildOrderButtons(order.status, item, order),
                   ),
                 ),
-
+                
                 if (order.items.last != item) const Divider(),
               ],
             );
           }),
 
-          // Return status for Pengembalian (di bawah semua produk)
-          if (order.status == "Pengembalian" && order.returnStatus != null) ...[
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Status Pengembalian",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    order.returnStatus!,
-                    style: TextStyle(
-                      color: order.returnStatus == "Sukses"
-                          ? Colors.green
-                          : mainColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+          // Info Total Order
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
             ),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("${order.items.length} Produk",
+                    style: const TextStyle(color: Colors.grey)),
+                Row(
+                  children: [
+                    const Text("Total Pesanan: "),
+                    Text(
+                      formatPrice(order.totalPrice),
+                      style: TextStyle(
+                          color: mainColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
   // ===================================================================
-  // Show Rating Dialog
+  // LOGIC TOMBOL
   // ===================================================================
+  
+  // FUNGSI BARU: Logic Beli Lagi
+  void _buyAgain(CartItem item) {
+    // 1. Buat item baru untuk keranjang
+    final newItem = CartItem(
+      shopName: item.shopName,
+      title: item.title,
+      price: item.price,
+      quantity: 1, // Default beli 1
+      variant: item.variant,
+      imagePath: item.imagePath,
+      stockLeft: 99,
+      selected: true, // Langsung centang
+    );
+
+    // 2. Masukkan ke CartManager
+    CartManager.addToCart(newItem);
+
+    // 3. Info & Navigasi
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Produk dimasukkan ke Keranjang")),
+    );
+    
+    // Opsional: Langsung pindah ke halaman keranjang
+    Navigator.push(
+      context, 
+      MaterialPageRoute(builder: (_) => const KeranjangPage())
+    );
+  }
+
+  void _navigateToProductDetail(CartItem item) {
+      // Find the corresponding product from Dummy Data
+      final product = ProductsData.products.firstWhere(
+        (p) => p.name == item.title,
+        orElse: () => ProductsData.products[0], // fallback
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductDetailPage(product: product),
+        ),
+      );
+  }
+
+  void _cancelOrder(Order order) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Batalkan Pesanan"),
+            content: const Text(
+                "Apakah Anda yakin ingin membatalkan pesanan ini?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Tidak"),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    OrderManager.orders.remove(order);
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text("Pesanan berhasil dibatalkan")),
+                  );
+                },
+                child: const Text("Ya, Batalkan"),
+              ),
+            ],
+          );
+        },
+      );
+  }
+
+  // Rating Dialog
   void _showRatingDialog(CartItem item) {
-    int selectedRating = 0;
+    int selectedRating = 5;
     final TextEditingController commentController = TextEditingController();
 
     showDialog(
@@ -327,146 +339,47 @@ class _PesananPageState extends State<PesananPage>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Product info
-                    Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            item.imagePath,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Star rating
-                    const Text("Rating:",
-                        style: TextStyle(fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 8),
+                    Text(item.title,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(5, (index) {
                         return IconButton(
                           icon: Icon(
-                            index < selectedRating
-                                ? Icons.star
-                                : Icons.star_border,
+                            index < selectedRating ? Icons.star : Icons.star_border,
                             color: Colors.amber,
                             size: 32,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              selectedRating = index + 1;
-                            });
-                          },
+                          onPressed: () => setState(() => selectedRating = index + 1),
                         );
                       }),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Comment field
                     TextField(
                       controller: commentController,
-                      maxLines: 3,
                       decoration: const InputDecoration(
-                        hintText: "Tulis ulasan Anda (opsional)",
+                        hintText: "Tulis ulasan...",
                         border: OutlineInputBorder(),
                       ),
+                      maxLines: 3,
                     ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => Navigator.pop(context),
                   child: const Text("Batal"),
                 ),
                 ElevatedButton(
-                  onPressed: selectedRating > 0
-                      ? () {
-                          // Find the corresponding product index
-                          final productIndex = ProductsData.products.indexWhere(
-                            (p) =>
-                                p.name == item.title &&
-                                p.image == item.imagePath,
-                          );
-
-                          if (productIndex == -1) {
-                            // Fallback search by name only
-                            final fallbackIndex =
-                                ProductsData.products.indexWhere(
-                              (p) => p.name == item.title,
-                            );
-                            if (fallbackIndex == -1) {
-                              // If still not found, use first product as fallback
-                              final fallbackProduct = ProductsData.products[0];
-                              final updatedProduct =
-                                  fallbackProduct.addReview(Review(
-                                name: "Pengguna",
-                                rating: selectedRating,
-                                comment: commentController.text.trim().isEmpty
-                                    ? "Produk bagus!"
-                                    : commentController.text.trim(),
-                                date: DateTime.now().toString().split(' ')[0],
-                              ));
-                              ProductsData.products[0] = updatedProduct;
-                            } else {
-                              final product =
-                                  ProductsData.products[fallbackIndex];
-                              final updatedProduct = product.addReview(Review(
-                                name: "Pengguna",
-                                rating: selectedRating,
-                                comment: commentController.text.trim().isEmpty
-                                    ? "Produk bagus!"
-                                    : commentController.text.trim(),
-                                date: DateTime.now().toString().split(' ')[0],
-                              ));
-                              ProductsData.products[fallbackIndex] =
-                                  updatedProduct;
-                            }
-                          } else {
-                            final product = ProductsData.products[productIndex];
-                            final updatedProduct = product.addReview(Review(
-                              name: "Pengguna",
-                              rating: selectedRating,
-                              comment: commentController.text.trim().isEmpty
-                                  ? "Produk bagus!"
-                                  : commentController.text.trim(),
-                              date: DateTime.now().toString().split(' ')[0],
-                            ));
-                            ProductsData.products[productIndex] =
-                                updatedProduct;
-                          }
-
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text("Terima kasih atas penilaian Anda!")),
-                          );
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEE4D2D),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text("Kirim"),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Ulasan terkirim! Terima kasih.")),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: mainColor),
+                  child: const Text("Kirim", style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -477,142 +390,66 @@ class _PesananPageState extends State<PesananPage>
   }
 
   // ===================================================================
-  // Build Order Buttons
+  // Build Tombol Berdasarkan Status
   // ===================================================================
-  List<Widget> _buildOrderButtons(String status,
-      [CartItem? item, Order? order]) {
-    void _navigateToProductDetail() {
-      if (item != null) {
-        // Find the corresponding product
-        final product = ProductsData.products.firstWhere(
-          (p) => p.name == item.title && p.image == item.imagePath,
-          orElse: () => ProductsData.products.firstWhere(
-            (p) => p.name == item.title,
-            orElse: () => ProductsData.products[0], // fallback
-          ),
-        );
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProductDetailPage(product: product),
-          ),
-        );
-      }
-    }
-
-    void _cancelOrder() {
-      if (order != null) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text("Batalkan Pesanan"),
-              content: const Text(
-                  "Apakah Anda yakin ingin membatalkan pesanan ini?"),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close dialog
-                  },
-                  child: const Text("Tidak"),
-                ),
-                TextButton(
-                  onPressed: () {
-                    // Remove the order from the list
-                    setState(() {
-                      OrderManager.orders.remove(order);
-                    });
-                    Navigator.of(context).pop(); // Close dialog
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text("Pesanan berhasil dibatalkan")),
-                    );
-                  },
-                  child: const Text("Ya"),
-                ),
-              ],
-            );
-          },
-        );
-      }
-    }
-
+  List<Widget> _buildOrderButtons(String status, CartItem item, Order order) {
     switch (status) {
       case "Dikemas":
         return [
+          // Tombol Hubungi Penjual (Opsional)
           OutlinedButton(
-            onPressed: _navigateToProductDetail,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.grey.shade400),
-            ),
-            child: const Text("Beli Lagi"),
+            onPressed: () => _navigateToProductDetail(item),
+            style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.grey.shade400)),
+            child: const Text("Lihat Produk"),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
+          // Tombol Batalkan
           OutlinedButton(
-            onPressed: _cancelOrder,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.grey.shade400),
-            ),
-            child: const Text("Batalkan Pesanan"),
+            onPressed: () => _cancelOrder(order),
+            style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.grey.shade400)),
+            child: const Text("Batalkan"),
           ),
         ];
+        
       case "Dikirim":
         return [
-          OutlinedButton(
-            onPressed: _navigateToProductDetail,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.grey.shade400),
-            ),
-            child: const Text("Beli Lagi"),
+          ElevatedButton(
+            onPressed: () {
+              // Simulasi Pesanan Diterima -> Pindah status ke Selesai
+              setState(() {
+                order.status = "Selesai";
+              });
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: mainColor),
+            child: const Text("Pesanan Diterima", style: TextStyle(color: Colors.white)),
           ),
         ];
+        
       case "Selesai":
         return [
+          // TOMBOL BELI LAGI (YANG SUDAH DIPERBAIKI)
           OutlinedButton(
-            onPressed: _navigateToProductDetail,
+            onPressed: () => _buyAgain(item), // Panggil fungsi _buyAgain
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.grey.shade400),
+              side: BorderSide(color: mainColor),
+              foregroundColor: mainColor,
             ),
             child: const Text("Beli Lagi"),
           ),
+          const SizedBox(width: 8),
+          // Tombol Nilai
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: mainColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              if (item != null) {
-                _showRatingDialog(item);
-              }
-            },
-            child: const Text("Nilai"),
-          ),
-          OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.grey.shade400),
-            ),
-            child: const Text("Pengembalian"),
+            onPressed: () => _showRatingDialog(item),
+            style: ElevatedButton.styleFrom(backgroundColor: mainColor),
+            child: const Text("Nilai", style: TextStyle(color: Colors.white)),
           ),
         ];
-      case "Pengembalian":
-        return []; // No buttons for Pengembalian
+        
       default:
-        return [
-          OutlinedButton(
-            onPressed: _navigateToProductDetail,
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.grey.shade400),
-            ),
-            child: const Text("Beli Lagi"),
-          ),
-        ];
+        return [];
     }
   }
 
-  // ===================================================================
-  // Helper Methods
-  // ===================================================================
   String formatPrice(int price) {
     return "Rp${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}";
   }
