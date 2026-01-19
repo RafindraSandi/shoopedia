@@ -5,6 +5,7 @@ import '../keranjang_page.dart';
 import '../cart_manager.dart'; // PENTING: Tambahkan ini
 import 'product_detail_page.dart';
 import 'models/product.dart';
+import 'tracking_page.dart';
 
 class PesananPage extends StatefulWidget {
   final int initialTab;
@@ -411,11 +412,29 @@ class _PesananPageState extends State<PesananPage>
           ),
         ];
         
-      case "Dikirim":
+case "Dikirim":
         return [
+          // 1. Tombol Lacak Paket (BARU)
+          OutlinedButton(
+            onPressed: () {
+              // Pastikan kamu sudah import 'tracking_page.dart' di atas
+              Navigator.push(
+                context, 
+                MaterialPageRoute(builder: (_) => const TrackingPage())
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: mainColor), // Border warna oranye
+              foregroundColor: mainColor,        // Teks warna oranye
+            ),
+            child: const Text("Lacak"),
+          ),
+          
+          const SizedBox(width: 8), // Jarak antar tombol
+          
+          // 2. Tombol Pesanan Diterima (LAMA)
           ElevatedButton(
             onPressed: () {
-              // Simulasi Pesanan Diterima -> Pindah status ke Selesai
               setState(() {
                 order.status = "Selesai";
               });
@@ -454,3 +473,4 @@ class _PesananPageState extends State<PesananPage>
     return "Rp${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}";
   }
 }
+
