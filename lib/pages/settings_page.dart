@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shoopedia/login_page.dart';
-import 'package:shoopedia/pages/address_page.dart';
-import 'package:shoopedia/pages/payment_page.dart';
-import 'package:shoopedia/pages/help_center_page.dart';
-import 'package:shoopedia/pages/privacy_policy_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../login_page.dart';
+import '../user_manager.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -15,6 +13,9 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final Color mainColor = const Color(0xFFEE4D2D);
 
+  // =======================================================
+  // DIALOG HELPERS
+  // =======================================================
   void _showHelpCenter() {
     showDialog(
       context: context,
@@ -30,8 +31,10 @@ class _SettingsPageState extends State<SettingsPage> {
               SizedBox(height: 8),
               Text(
                   '• Bagaimana cara mengubah alamat pengiriman?\n  Pergi ke menu Profil > Alamat'),
+              SizedBox(height: 8),
               Text(
                   '• Bagaimana cara menambah voucher?\n  Pergi ke menu Voucher di halaman utama'),
+              SizedBox(height: 8),
               Text(
                   '• Bagaimana cara melihat status pesanan?\n  Pergi ke menu Pesanan Saya'),
               SizedBox(height: 16),
@@ -43,6 +46,25 @@ class _SettingsPageState extends State<SettingsPage> {
               Text('Jam Operasional: 08:00 - 17:00 WIB'),
             ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicy() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kebijakan Privasi'),
+        content: const SingleChildScrollView(
+          child: Text(
+              "Kami menjaga privasi data Anda dengan serius. Data yang dikumpulkan hanya digunakan untuk keperluan transaksi dan peningkatan layanan Shoopedia. Kami tidak membagikan data pribadi kepada pihak ketiga tanpa izin."),
         ),
         actions: [
           TextButton(
@@ -130,7 +152,30 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _logout() {
+  // =======================================================
+  // FUNGSI LOGOUT (YANG DIPERBAIKI)
+  // =======================================================
+  Future<void> _handleLogout() async {
+    // 1. Hapus Dialog Konfirmasi dulu
+    Navigator.pop(context);
+
+    // 2. Hapus Sesi dari HP (PENTING!)
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('current_user'); // Hapus kunci sesi agar tidak auto-login
+
+    // 3. Reset data user di memori aplikasi
+    UserManager.logout();
+
+    if (!mounted) return;
+
+    // 4. Pindah ke Halaman Login dan hapus semua history halaman sebelumnya
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+      (Route<dynamic> route) => false,
+    );
+  }
+
+  void _confirmLogout() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -139,16 +184,10 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
-            onPressed: () {
-              // Navigate back to login page
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-                (Route<dynamic> route) => false,
-              );
-            },
+            onPressed: _handleLogout, // Panggil fungsi logout yang sudah diperbaiki
             child: const Text('Keluar', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -169,7 +208,9 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Account Settings Section
+          // ==================================================
+          // BAGIAN AKUN
+          // ==================================================
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -185,13 +226,17 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             child: Column(
               children: [
+                // NOTE: Untuk Edit Profil & Alamat, pastikan file halaman sudah dibuat
+                // Jika belum, kode ini akan error saat dijalankan (import tidak ditemukan)
+                // Sementara saya arahkan pop() atau comment navigasinya
                 ListTile(
                   leading: Icon(Icons.person, color: mainColor),
                   title: const Text('Edit Profil'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
-                    // Navigate to edit profile page
-                    Navigator.pop(context); // Go back to profile page
+                     // Navigasi ke Edit Profil (pastikan file ada)
+                     // Navigator.push(...); 
+                     Navigator.pop(context); // Sementara kembali
                   },
                 ),
                 const Divider(),
@@ -200,11 +245,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: const Text('Alamat Pengiriman'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AddressPage()),
-                    );
+                    // Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressPage()));
+                    // Comment dulu kalau file belum siap
                   },
                 ),
                 const Divider(),
@@ -213,11 +255,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: const Text('Metode Pembayaran'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const PaymentPage()),
-                    );
+                    // Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentPage()));
                   },
                 ),
               ],
@@ -226,7 +264,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 20),
 
-          // Support & Info Section
+          // ==================================================
+          // BAGIAN INFO & BANTUAN
+          // ==================================================
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -246,25 +286,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   leading: const Icon(Icons.help_center, color: Colors.blue),
                   title: const Text('Pusat Bantuan'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HelpCenterPage()),
-                    );
-                  },
+                  onTap: _showHelpCenter, // Panggil Dialog
                 ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.privacy_tip, color: Colors.orange),
                   title: const Text('Kebijakan Privasi'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const PrivacyPolicyPage()),
-                    );
-                  },
+                  onTap: _showPrivacyPolicy, // Panggil Dialog
                 ),
                 const Divider(),
                 ListTile(
@@ -286,7 +315,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 20),
 
-          // Account Actions Section
+          // ==================================================
+          // TOMBOL LOGOUT
+          // ==================================================
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -302,14 +333,13 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             child: ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Keluar Akun'),
-              onTap: _logout,
+              title: const Text('Keluar Akun', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              onTap: _confirmLogout, // Panggil konfirmasi logout
             ),
           ),
 
           const SizedBox(height: 20),
 
-          // App Version
           const Center(
             child: Text(
               'Versi 1.0.0',
