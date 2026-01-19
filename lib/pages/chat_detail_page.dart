@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../chat_manager.dart'; // PENTING: Import Manager yang baru dibuat
 
 class ChatDetailPage extends StatefulWidget {
   final String shopName;
@@ -16,12 +17,7 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final TextEditingController controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController(); // 1. Controller Scroll
-
-  List<Map<String, dynamic>> messages = [
-    {"sender": "shop", "text": "Halo kak, ada yang bisa dibantu?"},
-    {"sender": "user", "text": "Halo kak, mau tanya barang ready?"},
-  ];
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -46,23 +42,23 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final text = controller.text;
 
     setState(() {
-      messages.add({
-        "sender": "user",
-        "text": text,
-      });
+      // 1. SIMPAN KE MANAGER (Bukan List Lokal)
+      ChatManager.addMessage(widget.shopName, text, "user");
     });
 
     controller.clear();
-    _scrollToBottom(); // Scroll ke bawah setelah kirim
+    _scrollToBottom();
 
     // 2. Simulasi Auto Reply dari Toko
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         setState(() {
-          messages.add({
-            "sender": "shop",
-            "text": "Barang ready kak, silakan langsung diorder ya! 😊",
-          });
+          // Balasan Toko disimpan ke Manager juga
+          ChatManager.addMessage(
+            widget.shopName, 
+            "Barang ready kak, silakan langsung diorder ya! 😊", 
+            "shop"
+          );
         });
         _scrollToBottom();
       }
@@ -71,6 +67,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 3. AMBIL DATA DARI MANAGER
+    // Ini kuncinya: data diambil berdasarkan nama toko
+    final messages = ChatManager.getMessages(widget.shopName);
+
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
@@ -115,14 +115,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       // CHAT CONTENT
       // ------------------------
       body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(), // Tutup keyboard saat tap layar
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Column(
           children: [
             Expanded(
               child: ListView.builder(
-                controller: _scrollController, // Pasang controller
+                controller: _scrollController,
                 padding: const EdgeInsets.all(12),
-                itemCount: messages.length,
+                itemCount: messages.length, // Pakai length dari Manager
                 itemBuilder: (context, index) {
                   final msg = messages[index];
                   bool isUser = msg["sender"] == "user";
@@ -141,7 +141,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       ),
                       decoration: BoxDecoration(
                         color: isUser
-                            ? const Color(0xFFEE4D2D) // Shopee Orange
+                            ? const Color(0xFFEE4D2D)
                             : Colors.white,
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(12),
@@ -186,7 +186,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ),
               child: Row(
                 children: [
-                  // Tombol Tambah (Opsional, hiasan)
                   const Icon(Icons.add_circle_outline, color: Color(0xFFEE4D2D), size: 28),
                   const SizedBox(width: 8),
                   
@@ -226,4 +225,3 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     );
   }
 }
-
