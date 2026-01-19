@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert'; // PENTING: Untuk mengelola daftar data (JSON)
-import 'home_page.dart';
+import 'dart:convert';
 import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -20,6 +19,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _isObscure = true;
   bool _isButtonActive = false;
+  bool _isLoading = false; // TAMBAHAN: State untuk loading
 
   @override
   void initState() {
@@ -41,34 +41,94 @@ class _RegisterPageState extends State<RegisterPage> {
     });
   }
 
-  // FUNGSI BARU: MENYIMPAN BANYAK AKUN (TIDAK DITIMPA)
-  Future<void> _saveUserData() async {
-    final prefs = await SharedPreferences.getInstance();
+  // FUNGSI: PROSES REGISTER
+  Future<void> _handleRegister() async {
+    // 1. Validasi Input Dasar
+    String username = _usernameController.text.trim();
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+    String phone = _phoneController.text.trim();
+    String fullName = _nameController.text.trim();
 
-    // 1. Ambil data lama dulu (jika ada)
-    String? existingUsersString = prefs.getString('all_users');
-    List<dynamic> userList = [];
-
-    if (existingUsersString != null) {
-      // Kalau sudah ada data sebelumnya, kita ubah jadi List agar bisa ditambah
-      userList = jsonDecode(existingUsersString);
+    if (!email.contains('@')) {
+      _showSnackBar("Format email tidak valid!", Colors.red);
+      return;
+    }
+    if (password.length < 6) {
+      _showSnackBar("Password minimal 6 karakter!", Colors.red);
+      return;
     }
 
-    // 2. Siapkan data user baru
-    Map<String, String> newUser = {
-      "username": _usernameController.text,
-      "fullName": _nameController.text,
-      "email": _emailController.text,
-      "phone": _phoneController.text,
-      "password": _passwordController.text,
-      "bio": "",
-    };
+    setState(() {
+      _isLoading = true; // Mulai loading
+    });
 
-    // 3. Masukkan user baru ke dalam List (Tumpuk data)
-    userList.add(newUser);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? existingUsersString = prefs.getString('all_users');
+      List<dynamic> userList = [];
 
-    // 4. Simpan kembali List tersebut ke HP dalam bentuk Teks JSON
-    await prefs.setString('all_users', jsonEncode(userList));
+      if (existingUsersString != null) {
+        try {
+          userList = jsonDecode(existingUsersString);
+        } catch (e) {
+          debugPrint("Error decode JSON: $e");
+          userList = []; // Reset jika data rusak
+        }
+      }
+
+      // 2. CEK DUPLIKASI (PENTING)
+      // Kita cek apakah username atau email sudah pernah dipakai
+      bool isDuplicate = userList.any((user) =>
+          user['username'] == username || user['email'] == email);
+
+      if (isDuplicate) {
+        if (!mounted) return;
+        _showSnackBar("Username atau Email sudah terdaftar!", Colors.orange);
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // 3. Simpan Data Baru
+      Map<String, String> newUser = {
+        "username": username,
+        "fullName": fullName,
+        "email": email,
+        "phone": phone,
+        "password": password,
+        "bio": "Pengguna baru Shoopedia", // Default bio
+      };
+
+      userList.add(newUser);
+      await prefs.setString('all_users', jsonEncode(userList));
+
+      // Simulasi delay sedikit
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
+      _showSnackBar("Akun berhasil dibuat! Silakan Login.", Colors.green);
+
+      // Pindah ke halaman Login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar("Gagal mendaftar: $e", Colors.red);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
   }
 
   @override
@@ -105,8 +165,12 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 30),
               const Icon(Icons.shopping_bag, size: 60, color: mainColor),
               const SizedBox(height: 30),
+              
+              // --- FORM INPUT ---
+              // Username
               TextField(
                 controller: _usernameController,
+                textInputAction: TextInputAction.next, // Biar ada tombol next di keyboard
                 decoration: const InputDecoration(
                   hintText: "Username",
                   prefixIcon: Icon(Icons.person),
@@ -117,11 +181,14 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 20),
+              
+              // Nama Lengkap
               TextField(
                 controller: _nameController,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   hintText: "Nama Lengkap",
-                  prefixIcon: Icon(Icons.person_outline),
+                  prefixIcon: Icon(Icons.badge_outlined),
                   enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: Colors.grey)),
                   focusedBorder: UnderlineInputBorder(
@@ -129,12 +196,15 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 20),
+              
+              // Email
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   hintText: "Email",
-                  prefixIcon: Icon(Icons.email),
+                  prefixIcon: Icon(Icons.email_outlined),
                   enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: Colors.grey)),
                   focusedBorder: UnderlineInputBorder(
@@ -142,12 +212,15 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 20),
+              
+              // No Handphone
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   hintText: "No. Handphone",
-                  prefixIcon: Icon(Icons.phone),
+                  prefixIcon: Icon(Icons.phone_android),
                   enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: Colors.grey)),
                   focusedBorder: UnderlineInputBorder(
@@ -155,9 +228,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 20),
+              
+              // Password
               TextField(
                 controller: _passwordController,
                 obscureText: _isObscure,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _isButtonActive ? _handleRegister() : null,
                 decoration: InputDecoration(
                   hintText: "Password",
                   prefixIcon: const Icon(Icons.lock_outline),
@@ -173,6 +250,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 40),
+
+              // --- TOMBOL DAFTAR ---
               SizedBox(
                 width: double.infinity,
                 height: 45,
@@ -182,36 +261,27 @@ class _RegisterPageState extends State<RegisterPage> {
                         _isButtonActive ? mainColor : Colors.grey[300],
                     elevation: 0,
                   ),
-                  onPressed: _isButtonActive
-                      ? () async {
-                          // PANGGIL FUNGSI SIMPAN BARU
-                          await _saveUserData();
-
-                          // Move mounted check here
-                          if (!mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    "Akun berhasil dibuat! Silakan Login.")),
-                          );
-
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const LoginPage()),
-                          );
-                        }
+                  onPressed: (_isButtonActive && !_isLoading)
+                      ? _handleRegister
                       : null,
-                  child: Text(
-                    "Daftar",
-                    style: TextStyle(
-                        color:
-                            _isButtonActive ? Colors.white : Colors.grey[600],
-                        fontSize: 16),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : Text(
+                          "Daftar",
+                          style: TextStyle(
+                              color: _isButtonActive
+                                  ? Colors.white
+                                  : Colors.grey[600],
+                              fontSize: 16),
+                        ),
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
