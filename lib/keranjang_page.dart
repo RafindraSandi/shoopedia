@@ -1,8 +1,7 @@
-// keranjang_page.dart
 import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'cart_manager.dart';
+import 'cart_manager.dart'; // Pastikan CartItem ada di sini
 import 'pages/voucher_page.dart';
 import 'pages/payment_page.dart';
 
@@ -18,57 +17,52 @@ class _KeranjangPageState extends State<KeranjangPage> {
   final currency =
       NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
 
-  // Cart items state variable
   late List<CartItem> cartItems;
 
   @override
   void initState() {
     super.initState();
-    // Initialize cart items from CartManager
+    // Load data dari Manager
     cartItems = List.from(CartManager.cartItems);
   }
 
-  bool noProductSelected = false; // toggle "Tidak ada produk yang dipilih"
+  // FIX: Hapus logic "Switch No Product Selected", ganti pakai getter dynamic
+  bool get isAnySelected => cartItems.any((c) => c.selected);
   bool get allSelected =>
       cartItems.isNotEmpty && cartItems.every((c) => c.selected);
 
-  // helper: load local file or fallback to network placeholder
+  // Helper image (Gue rapihin dikit)
   Widget _imageFromPath(String path, {BoxFit fit = BoxFit.cover}) {
+    if (path.isEmpty) {
+       return Image.network('https://via.placeholder.com/200?text=No+Img', fit: fit);
+    }
     try {
-      if (path.startsWith('/') || path.startsWith('file://')) {
-        final filePath = path.startsWith('file://')
-            ? path.replaceFirst('file://', '')
-            : path;
-        final file = io.File(filePath);
+      if (path.startsWith('http')) {
+        return Image.network(path, fit: fit);
+      } else {
+        // Handle file path (bersihin prefix file:// jika ada)
+        final cleanPath = path.replaceFirst('file://', '');
+        final file = io.File(cleanPath);
         if (file.existsSync()) {
           return Image.file(file, fit: fit);
-        } else {
-          return Image.network(
-              'https://via.placeholder.com/200x200?text=No+Image',
-              fit: fit);
         }
-      } else {
-        return Image.network(path, fit: fit);
       }
     } catch (e) {
-      return Image.network('https://via.placeholder.com/200x200?text=Error',
-          fit: fit);
+      debugPrint("Error loading image: $e");
     }
+    return Image.network('https://via.placeholder.com/200?text=Error', fit: fit);
   }
 
-  // Hitung total harga item yang dipilih (digit-by-digit safe: sum programatik)
   int computeTotalSelected() {
     int total = 0;
     for (final item in cartItems) {
-      if (item.selected && !noProductSelected) {
-        // price * quantity
+      if (item.selected) {
         total += (item.price * item.quantity);
       }
     }
     return total;
   }
 
-  // Select / deselect all
   void _toggleSelectAll(bool? value) {
     final v = value ?? false;
     setState(() {
@@ -78,26 +72,47 @@ class _KeranjangPageState extends State<KeranjangPage> {
     });
   }
 
-  // Hapus produk yang dipilih
+  // UPDATE: Tambah konfirmasi sebelum hapus
+  void _confirmRemoveSelected() {
+    if (!isAnySelected) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Hapus Produk?"),
+        content: const Text("Produk yang dipilih akan dihapus dari keranjang."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _removeSelected(); // Action hapus beneran
+            },
+            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _removeSelected() {
     setState(() {
       cartItems.removeWhere((c) => c.selected);
-      // Sync back to CartManager
-      CartManager.cartItems.clear();
-      CartManager.cartItems.addAll(cartItems);
+      _syncToManager(); // Sync balik ke global manager
     });
   }
 
-  // Checkout action - navigate to payment page
   void _checkout() {
     final selected = cartItems.where((c) => c.selected).toList();
-    if (selected.isEmpty || noProductSelected) {
+    if (selected.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Pilih produk terlebih dahulu")));
       return;
     }
 
-    // Navigate to payment page with selected items
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -106,24 +121,37 @@ class _KeranjangPageState extends State<KeranjangPage> {
     );
   }
 
-  // Ubah kuantitas (min 1, max stockLeft)
   void _changeQuantity(int index, int delta) {
     setState(() {
       final item = cartItems[index];
       final newQty = item.quantity + delta;
-      if (newQty >= 1 &&
-          newQty <= (item.stockLeft > 0 ? item.stockLeft : 9999)) {
+      
+      // Cek stok dan minimal 1
+      int maxStock = item.stockLeft > 0 ? item.stockLeft : 9999;
+      
+      if (newQty >= 1 && newQty <= maxStock) {
         item.quantity = newQty;
+        _syncToManager(); // FIX: Jangan lupa sync perubahan qty ke Manager
+      } else if (newQty > maxStock) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Stok hanya tersedia $maxStock"), duration: const Duration(seconds: 1)),
+        );
       }
     });
   }
 
-  // Format harga setiap item ke string (Rp)
+  // Fungsi helper buat sync ke CartManager
+  void _syncToManager() {
+    CartManager.cartItems.clear();
+    CartManager.cartItems.addAll(cartItems);
+  }
+
   String _formatPrice(int price) => currency.format(price);
 
   @override
   Widget build(BuildContext context) {
     final total = computeTotalSelected();
+    
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -131,16 +159,16 @@ class _KeranjangPageState extends State<KeranjangPage> {
           const Text("Keranjang Saya"),
           const SizedBox(width: 8),
           Text("(${cartItems.length})",
-              style: const TextStyle(fontSize: 14, color: Colors.white70)),
+              style: const TextStyle(fontSize: 14, color: Colors.grey)),
         ]),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
-        elevation: 0.6,
+        elevation: 0.5,
         actions: [
           TextButton(
-            onPressed:
-                cartItems.any((c) => c.selected) ? _removeSelected : null,
-            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+            onPressed: isAnySelected ? _confirmRemoveSelected : null,
+            child: Text("Hapus", 
+              style: TextStyle(color: isAnySelected ? Colors.red : Colors.grey)),
           ),
         ],
       ),
@@ -152,15 +180,16 @@ class _KeranjangPageState extends State<KeranjangPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.shopping_cart_outlined,
-                            size: 64, color: Colors.grey),
+                        
                         const SizedBox(height: 12),
                         const Text("Keranjang kosong",
                             style: TextStyle(fontSize: 16, color: Colors.grey)),
                         const SizedBox(height: 6),
                         ElevatedButton(
-                          onPressed:
-                              () {}, // kembali ke halaman beranda atau belanja
+                          style: ElevatedButton.styleFrom(backgroundColor: mainColor),
+                          onPressed: () {
+                             // Navigator.pop(context); // Atau arahkan ke Home
+                          }, 
                           child: const Text("Belanja Sekarang"),
                         )
                       ],
@@ -168,12 +197,12 @@ class _KeranjangPageState extends State<KeranjangPage> {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount:
-                        cartItems.length + 1, // +1 untuk voucher / info area
+                    // ItemCount + 1 untuk header voucher
+                    itemCount: cartItems.length + 1, 
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
+                      // HEADER VOUCHER (Index 0)
                       if (index == 0) {
-                        // area voucher + toggle
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 12),
                           padding: const EdgeInsets.symmetric(
@@ -181,58 +210,35 @@ class _KeranjangPageState extends State<KeranjangPage> {
                           decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(10)),
-                          child: Column(
+                          child: Row(
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.confirmation_num_outlined,
-                                      color: Colors.orange),
-                                  const SizedBox(width: 10),
-                                  const Expanded(
-                                      child: Text("Voucher",
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold))),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                const VoucherPage()),
-                                      );
-                                    },
-                                    child: const Text("Pilih Voucher"),
-                                  ),
-                                ],
-                              ),
-                              const Divider(),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text("Tidak ada produk yang dipilih"),
-                                  Switch(
-                                    value: noProductSelected,
-                                    onChanged: (v) {
-                                      setState(() {
-                                        noProductSelected = v;
-                                        if (v) {
-                                          // jika toggle on, unselect semua agar total 0
-                                          for (var c in cartItems) {
-                                            c.selected = false;
-                                          }
-                                        }
-                                      });
-                                    },
-                                  )
-                                ],
+                              const Icon(Icons.confirmation_num_outlined,
+                                  color: Colors.orange),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                  child: Text("Voucher Shoopedia",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold))),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const VoucherPage()),
+                                  );
+                                },
+                                child: const Text("Pilih Voucher"),
                               ),
                             ],
                           ),
                         );
                       }
 
-                      final item = cartItems[index - 1];
+                      // ITEM LIST (Index > 0)
+                      final itemIndex = index - 1;
+                      final item = cartItems[itemIndex];
+                      
                       return Container(
                         margin: const EdgeInsets.symmetric(horizontal: 12),
                         padding: const EdgeInsets.all(10),
@@ -244,169 +250,100 @@ class _KeranjangPageState extends State<KeranjangPage> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // checkbox
+                                // Checkbox
                                 Checkbox(
-                                  value: item.selected && !noProductSelected,
-                                  onChanged: noProductSelected
-                                      ? null
-                                      : (v) {
-                                          setState(() {
-                                            item.selected = v ?? false;
-                                          });
-                                        },
+                                  activeColor: mainColor,
+                                  value: item.selected,
+                                  onChanged: (v) {
+                                    setState(() {
+                                      item.selected = v ?? false;
+                                    });
+                                  },
                                 ),
-                                const SizedBox(width: 6),
-                                // image
+                                
+                                // Image
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: SizedBox(
-                                    width: 86,
-                                    height: 86,
-                                    child: _imageFromPath(item.imagePath,
-                                        fit: BoxFit.cover),
+                                    width: 80,
+                                    height: 80,
+                                    child: _imageFromPath(item.imagePath),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                // details
+                                
+                                // Details
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      // shop name + Ubah
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 3),
-                                            decoration: BoxDecoration(
-                                                color: Colors.orange.shade50,
-                                                borderRadius:
-                                                    BorderRadius.circular(8)),
-                                            child: const Text("Star",
-                                                style: TextStyle(
-                                                    color: Colors.orange,
-                                                    fontSize: 12,
-                                                    fontWeight:
-                                                        FontWeight.bold)),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                              child: Text(item.shopName,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold))),
-                                          TextButton(
-                                            onPressed: () {
-                                              // placeholder: action Ubah / ganti varian
-                                              showModalBottomSheet(
-                                                context: context,
-                                                builder: (_) => SizedBox(
-                                                  height: 220,
-                                                  child: Center(
-                                                      child: Text(
-                                                          "Ubah varian (${item.title}) - implement UI di sini")),
-                                                ),
-                                              );
-                                            },
-                                            child: const Text("Ubah"),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
                                       Text(item.title,
                                           maxLines: 2,
-                                          overflow: TextOverflow.ellipsis),
-                                      const SizedBox(height: 6),
-                                      // variant row + stock badge
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 6),
-                                            decoration: BoxDecoration(
-                                                color: Colors.grey.shade100,
-                                                borderRadius:
-                                                    BorderRadius.circular(8)),
-                                            child: Text(item.variant,
-                                                style: const TextStyle(
-                                                    fontSize: 13)),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          if (item.stockLeft >= 0)
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 6),
-                                              decoration: BoxDecoration(
-                                                  color: Colors.grey.shade200,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8)),
-                                              child: Text(
-                                                  "Tersisa ${item.stockLeft}",
-                                                  style: const TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.black54)),
-                                            ),
-                                        ],
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 15)),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                            color: Colors.grey[200],
+                                            borderRadius: BorderRadius.circular(4)),
+                                        child: Text("Varian: ${item.variant}", 
+                                            style: const TextStyle(fontSize: 12, color: Colors.grey)),
                                       ),
+                                      const SizedBox(height: 8),
+                                      Text(_formatPrice(item.price),
+                                          style: TextStyle(
+                                              color: mainColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16)),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            // price + qty controls
+                            
+                            // Qty Control (Baris bawah)
+                            const Divider(),
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                // price
-                                Text(_formatPrice(item.price),
-                                    style: TextStyle(
-                                        color: mainColor,
-                                        fontWeight: FontWeight.bold)),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                                  onPressed: () {
+                                    // Hapus single item
+                                    setState(() {
+                                       cartItems.removeAt(itemIndex);
+                                       _syncToManager();
+                                    });
+                                  },
+                                ),
                                 const Spacer(),
-                                // qty controls
                                 Container(
                                   decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8)),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                      borderRadius: BorderRadius.circular(5)),
                                   child: Row(
                                     children: [
-                                      IconButton(
-                                        onPressed: () =>
-                                            _changeQuantity(index - 1, -1),
-                                        icon:
-                                            const Icon(Icons.remove, size: 18),
-                                        padding: const EdgeInsets.all(8),
+                                      InkWell(
+                                        onTap: () => _changeQuantity(itemIndex, -1),
+                                        child: const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          child: Icon(Icons.remove, size: 16),
+                                        ),
                                       ),
-                                      Text(item.quantity.toString(),
-                                          style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold)),
-                                      IconButton(
-                                        onPressed: () =>
-                                            _changeQuantity(index - 1, 1),
-                                        icon: const Icon(Icons.add, size: 18),
-                                        padding: const EdgeInsets.all(8),
+                                      Text("${item.quantity}", 
+                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                      InkWell(
+                                        onTap: () => _changeQuantity(itemIndex, 1),
+                                        child: const Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          child: Icon(Icons.add, size: 16),
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                // remove single item
-                                IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      cartItems.removeAt(index - 1);
-                                      // Sync back to CartManager
-                                      CartManager.cartItems.clear();
-                                      CartManager.cartItems.addAll(cartItems);
-                                    });
-                                  },
-                                  icon: Icon(Icons.delete_outline,
-                                      color: Colors.grey.shade600),
-                                ),
+                                )
                               ],
                             )
                           ],
@@ -415,53 +352,59 @@ class _KeranjangPageState extends State<KeranjangPage> {
                     },
                   ),
           ),
-          // bottom sticky area (select all + total + checkout)
+          
+          // BOTTOM STICKY BAR
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            color: Colors.white,
-            child: Row(
-              children: [
-                Checkbox(
-                  value: allSelected && !noProductSelected,
-                  onChanged: noProductSelected ? null : _toggleSelectAll,
-                ),
-                const SizedBox(width: 6),
-                const Text("Semua"),
-                const Spacer(),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      currency.format(total),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                        "${cartItems.where((c) => c.selected).fold<int>(0, (prev, e) => prev + e.quantity)} item dipilih",
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 140,
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed:
-                        (total > 0 && !noProductSelected) ? _checkout : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: (total > 0 && !noProductSelected)
-                          ? mainColor
-                          : Colors.grey.shade400,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: Text(
-                        "Checkout (${cartItems.where((c) => c.selected).length})"),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  offset: const Offset(0, -1),
+                  blurRadius: 10
+                )
+              ]
+            ),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  Checkbox(
+                    activeColor: mainColor,
+                    value: allSelected,
+                    onChanged: (cartItems.isEmpty) ? null : _toggleSelectAll,
                   ),
-                ),
-              ],
+                  const Text("Semua"),
+                  const Spacer(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text("Total", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        currency.format(total),
+                        style: TextStyle(
+                            color: mainColor,
+                            fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    height: 44,
+                    child: ElevatedButton(
+                      onPressed: (total > 0) ? _checkout : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Text(
+                          "Checkout (${cartItems.where((c) => c.selected).length})"),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -470,11 +413,16 @@ class _KeranjangPageState extends State<KeranjangPage> {
   }
 }
 
-// Model sederhana untuk item cart
+// NOTE:
+// Class 'CartItem' HARUSNYA ada di file 'cart_manager.dart'.
+// Kalau file cart_manager.dart belum ada modelnya, baru boleh pakai class di bawah ini.
+// Kalau sudah ada, HAPUS code di bawah ini biar gak error.
+
+/*
 class CartItem {
   String shopName;
   String title;
-  int price; // dalam IDR (integer)
+  int price;
   int quantity;
   int stockLeft;
   String variant;
@@ -492,3 +440,4 @@ class CartItem {
     this.selected = false,
   });
 }
+*/
