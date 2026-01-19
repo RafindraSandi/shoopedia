@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert'; // PENTING: Untuk membaca daftar data
+import 'dart:convert';
 import 'register_page.dart';
 import 'home_page.dart';
 import 'user_manager.dart';
@@ -18,6 +18,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isObscure = true;
   bool _isButtonActive = false;
+  bool _isLoading = false; // TAMBAHAN: Biar tombol bisa loading
 
   @override
   void initState() {
@@ -33,49 +34,83 @@ class _LoginPageState extends State<LoginPage> {
     });
   }
 
-  // FUNGSI LOGIN: MENCARI DATA DI DALAM LIST
   Future<void> _handleLogin() async {
-    String emailInput = _usernameController.text;
-    String passwordInput = _passwordController.text;
+    // UPDATE: Pakai trim() untuk buang spasi tidak sengaja di depan/belakang
+    String emailInput = _usernameController.text.trim();
+    String passwordInput = _passwordController.text.trim();
 
-    // Ambil Daftar Semua User dari HP (Shared Preferences)
-    final prefs = await SharedPreferences.getInstance();
-    String? existingUsersString = prefs.getString('all_users');
+    setState(() {
+      _isLoading = true; // Mulai loading
+    });
 
-    bool isFound = false;
-    Map<String, dynamic>? foundUser;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? existingUsersString = prefs.getString('all_users');
 
-    // Jika ada datanya, kita cari satu per satu
-    if (existingUsersString != null) {
-      List<dynamic> userList = jsonDecode(existingUsersString);
+      bool isFound = false;
+      Map<String, dynamic>? foundUser;
 
-      // Loop (Perulangan) untuk mengecek setiap akun yang tersimpan
-      for (var user in userList) {
-        if ((user['email'] == emailInput ||
-                user['username'] == emailInput ||
-                user['phone'] == emailInput ||
-                user['fullName'] == emailInput) &&
-            user['password'] == passwordInput) {
-          isFound = true;
-          foundUser = user;
-          break; // Ketemu! Berhenti mencari
+      if (existingUsersString != null) {
+        // UPDATE: Bungkus decode pakai try-catch biar gak crash kalau data corrupt
+        try {
+          List<dynamic> userList = jsonDecode(existingUsersString);
+
+          for (var user in userList) {
+            // Pastikan key-nya ada dulu pakai cek sederhana atau null check
+            String uEmail = user['email'] ?? '';
+            String uUsername = user['username'] ?? '';
+            String uPhone = user['phone'] ?? '';
+            String uFullname = user['fullName'] ?? '';
+            String uPass = user['password'] ?? '';
+
+            if ((uEmail == emailInput ||
+                    uUsername == emailInput ||
+                    uPhone == emailInput ||
+                    uFullname == emailInput) &&
+                uPass == passwordInput) {
+              isFound = true;
+              foundUser = user;
+              break;
+            }
+          }
+        } catch (e) {
+          debugPrint("Error decoding JSON: $e");
         }
       }
-    }
 
-    // Keputusan Akhir
-    if (isFound && foundUser != null) {
-      UserManager.setCurrentUserFromMap(foundUser);
-      _goToHome();
-    } else {
+      // Simulasi delay dikit biar kerasa "mikir" (opsional)
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (isFound && foundUser != null) {
+        // Simpan data user yang login (PENTING biar di Home gak kosong)
+        await UserManager.setCurrentUserFromMap(foundUser);
+        
+        _goToHome();
+      } else {
+        if (!mounted) return;
+        _showSnackBar("Email atau Password salah!", Colors.red);
+      }
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Email atau Password salah!"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar("Terjadi kesalahan sistem: $e", Colors.red);
+    } finally {
+      // Selesai loading, kembalikan state
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _goToHome() {
@@ -102,12 +137,10 @@ class _LoginPageState extends State<LoginPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        // UPDATE: Leading logic sedikit dirapikan
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: mainColor),
-          onPressed: () {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const RegisterPage()));
-          },
+          onPressed: () => Navigator.of(context).pop(), // Lebih aman pakai pop kalau cuma back
         ),
         title: const Text("Log In",
             style: TextStyle(color: Colors.black, fontSize: 20)),
@@ -120,8 +153,13 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 40),
               const Icon(Icons.shopping_bag, size: 70, color: mainColor),
               const SizedBox(height: 40),
+              
+              // FIELD USERNAME
               TextField(
                 controller: _usernameController,
+                // UPDATE: Set keyboard type biar tombol @ muncul (UX)
+                keyboardType: TextInputType.emailAddress, 
+                textInputAction: TextInputAction.next, // Biar tombol enter jadi "Next"
                 decoration: InputDecoration(
                   hintText: "No. Handphone/Email/Username",
                   prefixIcon: const Icon(Icons.email),
@@ -132,9 +170,13 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 20),
+              
+              // FIELD PASSWORD
               TextField(
                 controller: _passwordController,
                 obscureText: _isObscure,
+                textInputAction: TextInputAction.done, // Tombol enter jadi "Done/Check"
+                onSubmitted: (_) => _isButtonActive ? _handleLogin() : null, // Enter langsung login
                 decoration: InputDecoration(
                   hintText: "Password",
                   prefixIcon: const Icon(Icons.lock_outline),
@@ -150,6 +192,8 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 30),
+              
+              // TOMBOL LOGIN
               SizedBox(
                 width: double.infinity,
                 height: 45,
@@ -159,14 +203,22 @@ class _LoginPageState extends State<LoginPage> {
                         _isButtonActive ? mainColor : Colors.grey[300],
                     elevation: 0,
                   ),
-                  onPressed: _isButtonActive ? _handleLogin : null,
-                  child: Text(
-                    "Log In",
-                    style: TextStyle(
-                        color:
-                            _isButtonActive ? Colors.white : Colors.grey[600],
-                        fontSize: 16),
-                  ),
+                  // UPDATE: Cek _isLoading agar tidak double click
+                  onPressed: (_isButtonActive && !_isLoading) ? _handleLogin : null,
+                  child: _isLoading 
+                    ? const SizedBox(
+                        height: 20, 
+                        width: 20, 
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      )
+                    : Text(
+                        "Log In",
+                        style: TextStyle(
+                            color: _isButtonActive
+                                ? Colors.white
+                                : Colors.grey[600],
+                            fontSize: 16),
+                      ),
                 ),
               ),
             ],
